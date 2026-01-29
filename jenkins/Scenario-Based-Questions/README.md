@@ -532,3 +532,13 @@ Includes jobs, plugins, credentials, and configs.
 | Maintenance | Required | Minimal |
 | SCM Support | Any | GitLab only |
 | Plugins / Integrations | Massive plugin ecosystem | Built-in features |
+
+## 10. A Jenkins job fails intermittently. How do you debug?
+
+- Check console logs
+- Identify flaky tests
+- Check agent health
+- Validate network/DNS issues
+- Verify workspace cleanup
+- Check resource usage (CPU/RAM/Disk)
+- Reproduce locally
