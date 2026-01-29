@@ -1,3 +1,5 @@
+# 1. What is Docker?
+
 **Docker** is a **containerization platform** that packages an application and all its dependencies into a **container**, so it runs **consistently across different environments**.
 
 ### How Docker Works
@@ -338,3 +340,28 @@ A **multi-stage Docker build** uses **multiple `FROM` stages** in a single Docke
 
 - **Smaller image size**
 - **More secure** (no build tools in production image)
+
+Key Explanation (1–2 Points)
+
+Volumes
+
+Fully managed by Docker
+
+Preferred for production and persistent data
+
+Bind Mounts
+
+Directly map a host directory into a container
+
+Useful for development and debugging
+
+Simple Example
+# Volume
+docker run -v mydata:/app/data myapp
+
+
+# Bind mount
+docker run -v /host/data:/app/data myapp
+One-Line Interview Answer
+
+Volumes are Docker-managed and portable, while bind mounts directly map host directories and are mainly used in development.
