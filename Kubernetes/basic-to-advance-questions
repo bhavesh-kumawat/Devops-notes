@@ -1,1 +1,859 @@
-all k8s absic to advance questions
+**🔹 Basic Kubernetes Questions**
+
+## 1. What is Kubernetes and why is it used?
+
+**Kubernetes** is an **open-source container orchestration platform** used to **deploy, manage, and scale containerized applications automatically**.
+
+**Why it is used:**
+
+It solves problems like **manual deployment, scaling, and failure handling** by automating container management across multiple servers.
+
+**How it works (brief):**
+
+Kubernetes groups containers into **pods**, runs them on a **cluster of nodes**, and continuously ensures the **desired state** (correct number of replicas, healthy containers).
+
+**Example:**
+
+If one container crashes, Kubernetes **automatically restarts it**, and if traffic increases, it **scales the application** by creating more pods.
+
+---
+
+## 2. What problem does Kubernetes solve?
+
+**Kubernetes solves the problem of managing containerized applications at scale.**
+
+**Before Kubernetes:**
+
+Teams had to **manually deploy, scale, and monitor containers**, which became difficult as the number of services and servers increased.
+
+**Problems it solves:**
+
+- **Manual scaling** → Kubernetes auto-scales applications
+- **Container failures** → Kubernetes self-heals (restart, reschedule)
+- **Load balancing** → Automatically distributes traffic
+- **Environment inconsistency** → Same behavior across dev, test, prod
+
+**Example:**
+
+If a pod crashes or a node goes down, Kubernetes **automatically recreates the pod on another node** without manual intervention.
+
+---
+
+## 3. What are the main components of Kubernetes architecture?
+
+The **main components of Kubernetes architecture** are divided into **Control Plane components** and **Node (Worker) components**. This is a classic DevOps interview question.
+
+### 1. Control Plane Components (Master manages the cluster)
+
+| **Component** | **Purpose** |
+| --- | --- |
+| **kube-apiserver** | Exposes the Kubernetes API. All communication (kubectl, controllers, etc.) goes through it. |
+| **etcd** | Distributed key-value store. Stores cluster state, configuration, and secrets. |
+| **kube-scheduler** | Assigns pods to nodes based on resource availability and constraints. |
+| **kube-controller-manager** | Runs controllers that maintain desired state (replica count, node health, endpoints). |
+| **cloud-controller-manager** | Integrates Kubernetes with cloud providers (load balancers, VMs, networking). |
+
+### 2. Node (Worker) Components
+
+| **Component** | **Purpose** |
+| --- | --- |
+| **kubelet** | Agent running on each node. Ensures containers in pods are running as defined. |
+| **kube-proxy** | Handles networking and load balancing for services on the node. |
+| **Container Runtime** | Runs containers (Docker, containerd, CRI-O). |
+
+### 3. Optional / Higher-Level Concepts
+
+- **Pods:** Smallest deployable unit, can contain one or more containers.
+- **Services:** Abstracts pods and provides stable networking.
+- **Namespaces:** Logical isolation for resources.
+- **ConfigMaps & Secrets:** Store configuration and sensitive data.
+
+---
+
+## 4. What is a cluster in Kubernetes?
+
+In Kubernetes, a **cluster** is a set of **nodes (machines)** that work together to run containerized applications. It represents the **entire Kubernetes environment** where workloads are deployed, managed, and scaled.
+
+**How it works:**
+
+- A cluster has **two main types of nodes**:
+    1. **Control Plane (Master) Node(s):**
+        - Manages the cluster state
+        - Runs components like **kube-apiserver, etcd, kube-scheduler, controller-manager**
+    2. **Worker Node(s):**
+        - Runs **pods** (containers)
+        - Has **kubelet, kube-proxy, and container runtime**
+- The **control plane** ensures that the **desired state** (number of pods, configuration, networking) is maintained across all worker nodes.
+
+**Why it is used:**
+
+- Provides a **single logical environment** for deploying applications.
+- Enables **high availability**: if one node fails, pods are rescheduled on other nodes.
+- Supports **scaling**: add or remove nodes to match workload demand.
+
+**Example:**
+
+- A company has a Kubernetes cluster with 3 worker nodes.
+- You deploy a web service with 6 replicas. Kubernetes automatically **distributes the pods across the nodes**.
+- If one node crashes, the pods on that node are **rescheduled on remaining nodes**, ensuring the service stays online.
+
+---
+
+## 5. What is a node?
+
+In Kubernetes, a **node** is a physical or virtual machine that runs the workloads (containers) in the cluster. Nodes are the workers of a Kubernetes cluster and execute the pods scheduled by the control plane.
+
+**How it works:**
+
+Every node has these components:
+
+- **kubelet** – Agent that ensures containers in pods are running and healthy.
+- **kube-proxy** – Handles networking and load balancing for services.
+- **Container Runtime** – Software that runs containers (Docker, containerd, CRI-O).
+
+Nodes register with the control plane, which schedules pods onto them.
+
+**Types of Nodes:**
+
+- **Master/Control Plane Node** – Runs cluster management components (API server, scheduler, controller manager).
+- **Worker Node** – Runs the actual application workloads (pods).
+
+**Why nodes are important:**
+
+- They provide compute, storage, and network resources for pods.
+- Kubernetes can distribute workloads across nodes for load balancing and fault tolerance.
+- Adding more nodes increases cluster capacity and scalability.
+
+**Example:**
+
+- You have a cluster with 3 worker nodes.
+- You deploy a web application with 6 pods. Kubernetes distributes 2 pods per node.
+- If one node fails, the pods on that node are rescheduled to other nodes, keeping the application running.
+
+---
+
+## 6. What is a pod?
+
+In Kubernetes, a **pod** is the **smallest deployable unit**. It represents **one or more containers** that share the **same network namespace, storage, and configuration**. Pods are the building blocks of Kubernetes applications.
+
+**How it works:**
+
+- A pod can contain **a single container** or **multiple tightly coupled containers** (called a **multi-container pod**).
+- Containers in the same pod share:
+    - **IP address and port space** → can communicate via [`localhost`](http://localhost)
+    - **Volumes** → shared storage
+    - **Namespace and lifecycle** → they start, stop, and restart together
+- Pods are **ephemeral**. If a pod dies, Kubernetes can **create a new pod** based on the Deployment or ReplicaSet definition.
+
+**Why pods are used:**
+
+- They provide a **logical host** for containers in Kubernetes.
+- They allow **tight coupling of containers** (sidecars, logging agents, proxies).
+- Kubernetes schedules pods onto nodes based on **resource requirements and constraints**.
+
+**Example:**
+
+- A web application pod might contain:
+    - **Main container:** Nginx server
+    - **Sidecar container:** Log collector or monitoring agent
+- Both containers share the **same network and storage**, but run separate processes.
+- If the node crashes, Kubernetes **reschedules the pod** to another node, ensuring the application remains available.
+
+---
+
+## 7. Difference between container and pod?
+
+The **difference between a container and a pod** is a common Kubernetes interview question, and it's important to answer **clearly with both technical and practical perspective**.
+
+### 1. Container
+
+- **Definition:** A container is a **single, isolated runtime environment** for an application and its dependencies.
+- **Scope:** Runs a single process, has its own filesystem, network namespace (unless shared).
+- **Lifecycle:** Managed by the container runtime (Docker, containerd).
+- **Standalone:** Can run independently outside Kubernetes.
+
+**Example:**
+
+- A Docker container running an Nginx web server.
+
+### 2. Pod
+
+- **Definition:** A pod is the **smallest deployable unit in Kubernetes**, which can contain **one or more containers**.
+- **Scope:** Containers in a pod **share network, storage, and lifecycle**.
+- **Lifecycle:** Managed by Kubernetes (via Deployment, ReplicaSet, etc.).
+- **Not standalone:** A pod cannot exist outside Kubernetes.
+
+**Example:**
+
+- A pod with:
+    - Nginx container (main app)
+    - Sidecar container (logs collector)
+    - Both share the same IP, port space, and volumes
+
+### Key Differences (Interview-Ready Table)
+
+| **Feature** | **Container** | **Pod** |
+| --- | --- | --- |
+| Unit of Deployment | Single application | One or more containers |
+| Isolation | Own filesystem, network | Shared IP, port, storage between containers |
+| Lifecycle Management | Container runtime | Kubernetes scheduler & controllers |
+| Scalability | Independent scaling possible | Pod scaled as a unit |
+| Standalone | Yes | No, needs Kubernetes |
+
+---
+
+## 8. What is kube-apiserver?
+
+**kube-apiserver** is the **central component of the Kubernetes control plane** and serves as the **main entry point for all administrative tasks and API requests** in the cluster.
+
+**How it works:**
+
+- All interactions with the Kubernetes cluster—whether from **kubectl, other control plane components, or external tools**—go through the **API server**.
+- It **validates and processes requests**, then updates the cluster state in **etcd** (the key-value store).
+- Exposes **RESTful APIs** for all Kubernetes resources like pods, deployments, services, secrets, etc.
+
+**Why it is used:**
+
+- Acts as the **gatekeeper and brain** of the cluster.
+- Ensures **desired state consistency**: e.g., when you create a deployment, kube-apiserver stores it in etcd and the controllers act to maintain it.
+- Provides a **secure and consistent interface** for managing the cluster.
+
+**Example scenario:**
+
+1. You run:
+
+```
+kubectl get pods
+```
+
+1. `kubectl` sends the request to **kube-apiserver**.
+2. kube-apiserver **authenticates and authorizes** the request.
+3. It queries **etcd** for pod information and returns the result.
+
+---
+
+## 9. What is etcd?
+
+**etcd** is a **distributed key-value store** that Kubernetes uses to **persist the cluster state and configuration**. It is a **critical component of the control plane**.
+
+**How it works:**
+
+- Stores the **entire state of the cluster**, including:
+    - Pods, Deployments, Services
+    - ConfigMaps, Secrets
+    - Node information, labels, and annotations
+- **Highly available and consistent**: etcd uses the **Raft consensus algorithm** to ensure all nodes have the same data.
+- kube-apiserver interacts with etcd to **read/write cluster state**.
+
+**Why it is used:**
+
+- **Single source of truth** for Kubernetes cluster state.
+- Ensures **consistency and reliability** across control plane components.
+- Enables **cluster recovery** if control plane components crash: etcd contains all definitions to restore pods and resources.
+
+**Example scenario:**
+
+1. You create a Deployment:
+
+```
+kubectl apply -f deployment.yaml
+```
+
+1. kube-apiserver validates the request and writes the Deployment object to **etcd**.
+2. Controller-manager reads the desired state from etcd and creates pods accordingly.
+- If the master node restarts, **etcd data ensures the cluster comes back to the desired state**.
+
+---
+
+## 10. What is kube-scheduler?
+
+**kube-scheduler** is a **control plane component** in Kubernetes that is responsible for **assigning pods to nodes** in the cluster based on resource availability and scheduling policies.
+
+**How it works:**
+
+1. When a new pod is created (or a pod needs rescheduling), it **remains unscheduled** until kube-scheduler processes it.
+2. kube-scheduler **evaluates all available nodes** and selects the most suitable one based on:
+    - CPU, memory, and other resource requirements
+    - Node labels and taints/tolerations
+    - Affinity/anti-affinity rules
+    - Custom policies or priorities
+3. Once a node is selected, kube-scheduler **binds the pod** to that node.
+4. kubelet on the assigned node then starts the container(s) in the pod.
+
+**Why it is used:**
+
+- Ensures **optimal utilization of cluster resources**.
+- Enforces **scheduling policies**, such as spreading pods across nodes for high availability.
+- Automatically handles **rescheduling** when nodes go down or resources change.
+
+**Example scenario:**
+
+- A pod requires 2 CPU cores and 4GB memory.
+- The cluster has 3 nodes:
+    - Node A: 1 CPU, 2GB → not enough resources
+    - Node B: 4 CPU, 8GB → sufficient resources
+    - Node C: 2 CPU, 4GB → exact match
+- kube-scheduler selects **Node B or Node C** depending on policies and schedules the pod there.
+
+---
+
+## 11. What is kubelet?
+
+**kubelet** is a **node-level agent** in Kubernetes that runs on every worker node. Its main responsibility is to **ensure that containers in pods are running and healthy** according to the pod specifications.
+
+**How it works:**
+
+1. kubelet receives **pod specifications** (PodSpecs) from the **kube-apiserver**.
+2. It interacts with the **container runtime** (Docker, containerd, or CRI-O) to **start, stop, or restart containers**.
+3. Continuously monitors the **health of containers** using **liveness and readiness probes**.
+4. Reports the **status of pods and node resources** back to the kube-apiserver.
+
+**Why it is used:**
+
+- Acts as the **"executor" on each node**, ensuring Kubernetes desired state is applied locally.
+- Performs **self-healing** by restarting failed containers.
+- Enables **node-level monitoring and reporting** to the control plane.
+
+**Example scenario:**
+
+- You deploy a pod with an Nginx container.
+- kube-scheduler assigns the pod to Node B.
+- kubelet on Node B instructs Docker to start the Nginx container.
+- If the container crashes, kubelet **automatically restarts it**.
+- Node status and pod health are reported to kube-apiserver.
+
+---
+
+## 12. What is kubectl?
+
+**kubectl** is the **command-line interface (CLI) tool** used to interact with a Kubernetes cluster. It allows developers and administrators to **create, manage, and troubleshoot Kubernetes resources**.
+
+**How it works:**
+
+1. You run a **kubectl command** on your machine.
+2. kubectl sends an **API request to the kube-apiserver**.
+3. kube-apiserver validates the request and updates **etcd** or returns the requested cluster state.
+4. Output (e.g., list of pods, logs) is displayed in your terminal.
+
+**Why it is used:**
+
+- Provides **control over all Kubernetes resources** (pods, deployments, services, etc.).
+- Enables **cluster management** from anywhere, as long as you have access credentials.
+- Useful for **deployment, scaling, troubleshooting, and debugging**.
+
+**Example commands:**
+
+- List pods:
+
+```
+kubectl get pods
+```
+
+- Get pod details:
+
+```
+kubectl describe pod <pod-name>
+```
+
+- Apply a manifest file:
+
+```
+kubectl apply -f deployment.yaml
+```
+
+- View pod logs:
+
+```
+kubectl logs <pod-name>
+```
+
+---
+
+## 13. What is a namespace and why is it used?
+
+In Kubernetes, a **namespace** is a **logical partition within a cluster** that allows you to **divide cluster resources between multiple users, teams, or environments**. It provides **scope for names** and **resource isolation**.
+
+**How it works:**
+
+- Kubernetes objects (pods, services, deployments, etc.) exist **within a namespace**.
+- Names of resources only need to be **unique within the same namespace**, not across the cluster.
+- Default namespaces include:
+    - `default` → used if no namespace is specified
+    - `kube-system` → for control plane components
+    - `kube-public` → publicly readable resources
+
+**Why it is used:**
+
+1. **Resource isolation:** Different teams can share a cluster without interfering with each other.
+2. **Organization:** Separate environments (dev, staging, prod) within the same cluster.
+3. **Access control:** RBAC can be applied per namespace to limit permissions.
+
+**Example scenario:**
+
+- Team A deploys pods in `dev` namespace.
+- Team B deploys pods in `staging` namespace.
+- Both can use a pod named `web-app` without conflicts because the **namespace separates their scope**.
+- RBAC rules can allow Team A to only manage `dev` namespace, and Team B only `staging`.
+
+---
+
+## 14. What is a label and selector?
+
+In Kubernetes, **labels** and **selectors** are used to **organize, identify, and group resources** in a cluster. They are a **core mechanism for management and scheduling**.
+
+### 1. Label
+
+- **Definition:** A **key-value pair** attached to Kubernetes objects (pods, services, deployments, etc.).
+- **Purpose:** Adds **metadata to resources** to categorize or identify them.
+- **Syntax example:**
+
+```
+labels:
+  app: web-app
+  environment: dev
+```
+
+**Why it's used:**
+
+- Helps to **filter, query, and manage resources** dynamically.
+- Works for grouping pods, selecting workloads, and applying policies.
+
+### 2. Selector
+
+- **Definition:** A **query that matches objects based on their labels**.
+- **Purpose:** Allows **controllers, services, and deployments to target specific pods**.
+- **Example:**
+
+```
+selector:
+  matchLabels:
+    app: web-app
+```
+
+- This selector matches **all pods labeled with `app=web-app`**.
+
+**Example scenario:**
+
+- You have 6 pods in your cluster:
+    - 3 labeled `app=web-app, environment=dev`
+    - 3 labeled `app=web-app, environment=prod`
+- A service uses the selector `environment=prod` → **only routes traffic to prod pods**.
+- A Deployment with the same selector ensures **only the intended pods are managed**.
+
+---
+
+## 15. What is a manifest file?
+
+In Kubernetes, a **manifest file** is a **YAML (or JSON) file that defines the desired state of a Kubernetes resource**. It tells Kubernetes **what to create, how it should behave, and its configuration**.
+
+**How it works:**
+
+- Manifest files describe **Kubernetes objects** such as:
+    - Pods
+    - Deployments
+    - Services
+    - ConfigMaps, Secrets, etc.
+- When you run:
+
+```
+kubectl apply -f deployment.yaml
+```
+
+- Kubernetes reads the manifest and **creates or updates the resource** to match the desired state.
+- The **control plane components** (API server, controllers) ensure the cluster **matches the specifications** in the manifest.
+
+**Key parts of a manifest file:**
+
+1. **apiVersion** → Kubernetes API version for the object
+2. **kind** → Type of resource (Pod, Deployment, Service)
+3. **metadata** → Name, labels, annotations
+4. **spec** → Configuration of the resource (containers, replicas, ports, etc.)
+
+**Example manifest (Deployment):**
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+  labels:
+    app: web-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+```
+
+- This manifest tells Kubernetes to **create 3 replicas of a pod** running Nginx.
+- Kubernetes ensures that the **actual state matches this desired state** at all times.
+
+**Why it's used:**
+
+- **Declarative configuration** → "Tell Kubernetes what you want, it ensures it happens."
+- **Version control friendly** → YAML files can be stored in Git.
+- Enables **reproducibility and automation**.
+
+---
+
+🔹 **Workloads & Controllers (Core Concepts)**
+
+## 16. What is a Deployment?
+
+**In Kubernetes, a** Deployment **is a** higher-level controller that manages pods and ReplicaSets**. It ensures that the** desired number of pod replicas are running, up-to-date, and healthy.
+
+**How it works:**
+
+1. You define a Deployment in a **manifest file**, specifying:
+    - Number of replicas
+    - Pod template (container image, ports, environment variables, etc.)
+    - Update strategy (rolling update or recreate)
+2. When applied via `kubectl`, Kubernetes:
+    - Creates a **ReplicaSet** automatically
+    - Ensures the **specified number of pods are running**
+    - Monitors pods and **recreates them if they fail**
+    - Handles **updates to pod templates** via rolling updates
+
+**Why it is used:**
+
+- **Self-healing:** Automatically restarts failed pods
+- **Scaling:** Easy to scale up or down by changing replicas
+- **Rolling updates:** Deploy new versions without downtime
+- **Rollback:** Can revert to a previous version if the update fails
+
+**Example manifest:**
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+```
+
+- This Deployment ensures **3 replicas of an Nginx pod** are running.
+- If a pod crashes, Kubernetes **creates a new one automatically**.
+
+---
+
+## 17. Difference between Deployment and StatefulSet?
+
+The **difference between a Deployment and a StatefulSet** is a classic Kubernetes interview question. Both are controllers that manage pods, but they serve **different use cases**.
+
+### 1. Deployment
+
+- **Purpose:** Manages **stateless applications** (web servers, APIs, microservices).
+- **Pod identity:** Pods are **interchangeable**, have no stable network identity.
+- **Storage:** Pods typically use **ephemeral storage**; not tied to persistent volumes by default.
+- **Scaling:** Easy to scale up or down; new pods are identical and can be replaced arbitrarily.
+- **Update strategy:** Supports **rolling updates** with automatic rollback.
+
+**Example use case:** Web servers, stateless microservices, API servers.
+
+### 2. StatefulSet
+
+- **Purpose:** Manages **stateful applications** that require **stable identity, network, and storage** (databases, caches).
+- **Pod identity:** Each pod gets a **stable hostname and ordinal index** (pod-0, pod-1, pod-2).
+- **Storage:** Each pod can have its **own PersistentVolume** that persists across restarts.
+- **Scaling:** Pods are created/destroyed **in order** (sequentially).
+- **Update strategy:** Rolling updates are **ordered and controlled**, preserving pod identity.
+
+**Example use case:** MySQL, MongoDB, Kafka, Redis clusters.
+
+### Key Differences (Interview-Ready Table)
+
+| **Feature** | **Deployment** | **StatefulSet** |
+| --- | --- | --- |
+| Use case | Stateless apps | Stateful apps |
+| Pod identity | Interchangeable | Stable, unique |
+| Storage | Ephemeral by default | Persistent per pod |
+| Pod creation | Any order | Sequential, ordered |
+| Network identity | Dynamic | Stable DNS & hostname |
+| Scaling | Easy | Ordered scaling & updates |
+| Update/rollback | Rolling update | Ordered rolling update |
+
+---
+
+## 18. What is a ReplicaSet?
+
+**A** ReplicaSet **is a** Kubernetes controller **that ensures a** specified number of identical pods **are running at all times. It is the** underlying mechanism used by Deployments to manage pods.
+
+**How it works:**
+
+1. You define a **ReplicaSet** with:
+    - A **pod template**
+    - The **desired number of replicas**
+2. Kubernetes constantly monitors the cluster:
+    - If a pod dies or a node fails, the ReplicaSet **creates a new pod** to maintain the desired count.
+    - If extra pods exist, it **terminates excess pods**.
+
+**Why it is used:**
+
+- **High availability:** Ensures that the application always has the required number of pods running.
+- **Self-healing:** Automatically replaces failed or deleted pods.
+- **Foundation for Deployments:** Deployments use ReplicaSets for rolling updates and scaling.
+
+---
+
+## 19. What is a DaemonSet?
+
+A **DaemonSet** is a Kubernetes controller that ensures **one (or more) pod runs on every (or selected) node** in a cluster. It's mainly used for **running cluster-level or node-level services**.
+
+**How it works:**
+
+1. You define a **DaemonSet** with a pod template.
+2. Kubernetes ensures:
+    - **One pod per node** (or per node matching a label selector).
+    - When a **new node is added**, a pod is automatically created on it.
+    - When a **node is removed**, the pod on that node is deleted.
+
+**Why it is used:**
+
+- **Node-level services:** DaemonSets are ideal for services that need to run on every node.
+- **Examples:**
+    - Log collection (Fluentd, Logstash)
+    - Monitoring agents (Prometheus Node Exporter, Datadog agent)
+    - Networking plugins (Calico, Weave)
+- Ensures **uniform coverage** across the cluster.
+
+---
+
+## 20. What is a Job and CronJob?
+
+In Kubernetes, **Job** and **CronJob** are **controllers used for running batch or scheduled tasks**, unlike Deployments or StatefulSets which manage long-running applications.
+
+### 1. Job
+
+**Definition:**
+
+A **Job** ensures that **one or more pods run to completion** successfully. It is used for **finite, short-lived tasks** rather than long-running services.
+
+**How it works:**
+
+- You define a pod template and **the number of completions** (usually 1).
+- Kubernetes creates pods to run the task.
+- Once the task finishes successfully, the **Job is marked complete**.
+- If a pod fails, Kubernetes **retries until completion**.
+
+**Example use case:**
+
+- Data processing job
+- Database migration
+- One-time script execution
+
+**Example manifest:**
+
+```
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migration
+spec:
+  template:
+    spec:
+      containers:
+      - name: migrate
+        image: migration-tool:latest
+      restartPolicy: OnFailure
+```
+
+### 2. CronJob
+
+**Definition:**
+
+A **CronJob** is like a **Job with a schedule**, similar to a Linux `cron` job. It runs tasks **periodically at defined intervals**.
+
+**How it works:**
+
+- You specify a **cron schedule** (e.g., `"0 0 * * *"`).
+- Kubernetes creates a **Job for each scheduled execution**.
+- Supports retry on failure and concurrency policies.
+
+**Example use case:**
+
+- Daily database backup
+- Periodic report generation
+- Cleanup jobs
+
+**Example manifest:**
+
+```
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: daily-backup
+spec:
+  schedule: "0 2 * * *" # 2 AM daily
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: backup-tool:latest
+          restartPolicy: OnFailure
+```
+
+### Key Differences (Job vs CronJob)
+
+| **Feature** | **Job** | **CronJob** |
+| --- | --- | --- |
+| Purpose | Run task to completion | Run tasks on a schedule |
+| Execution | Once (or specified completions) | Repeated automatically |
+| Use case | Database migration, script execution | Daily backups, periodic reporting |
+| Scheduling | Manual | Cron-like schedule |
+
+---
+
+## 21. What is rolling update in Kubernetes?
+
+A **rolling update** in Kubernetes is a **deployment strategy** that allows you to **update an application's pods gradually without downtime**, ensuring the application remains available while new versions are rolled out.
+
+**How it works:**
+
+1. You update a **Deployment** with a new container image or configuration.
+2. Kubernetes **creates new pods** with the updated version while **gradually terminating old pods**.
+3. The number of pods updated at a time is controlled by the **maxUnavailable** and **maxSurge** settings in the Deployment.
+4. Kubernetes continuously monitors **health checks** (liveness/readiness probes) to ensure the new pods are running correctly.
+5. If any new pod fails, the update **pauses or rolls back automatically** depending on the policy.
+
+**Why it is used:**
+
+- **Zero downtime deployments:** Users can continue using the application while updates are applied.
+- **Safe updates:** Only a subset of pods is updated at a time, reducing risk.
+- **Automated rollback:** Failed updates can be reverted automatically.
+
+**Example scenario:**
+
+- Deployment has 3 replicas running Nginx `1.21`.
+- You update the Deployment to Nginx `1.22`.
+- Kubernetes creates **one new pod** with `1.22`, waits until it's ready, then deletes one old pod with `1.21`.
+- Process repeats until all pods are updated.
+
+---
+
+## 22. What is rollback in Kubernetes?
+
+In Kubernetes, a **rollback** is the process of **reverting an application Deployment to a previous stable version** if the current update fails or behaves unexpectedly. It ensures **high availability and reliability** of applications.
+
+**How it works:**
+
+1. Kubernetes **keeps a revision history** of Deployment updates.
+2. If a rolling update introduces issues (failed pods, errors, unhealthy readiness checks), you can **rollback to a previous revision**.
+3. Rollback restores the **old pod template**, **replica count**, and configuration.
+4. Kubernetes automatically **creates pods with the previous version** and removes the problematic pods.
+
+**Why it is used:**
+
+- **Recover from failed deployments** quickly.
+- **Maintain uptime** while ensuring application stability.
+- Works with **rolling updates** to make deployments safer.
+
+**Example scenario:**
+
+- Deployment has 3 replicas running Nginx `1.21`.
+- You update to Nginx `1.22`.
+- After update, pods crash due to configuration issues.
+- Run rollback command:
+
+```
+kubectl rollout undo deployment web-app
+```
+
+- Kubernetes restores **Nginx `1.21` pods** automatically, and the service remains available.
+
+**Commands:**
+
+- **Check rollout status:**
+
+```
+kubectl rollout status deployment web-app
+```
+
+- **Rollback to previous version:**
+
+```
+kubectl rollout undo deployment web-app
+```
+
+- **View rollout history:**
+
+```
+kubectl rollout history deployment web-app
+```
+
+---
+
+## 23. What are init containers?
+
+**Init containers** in Kubernetes are **special containers that run before the main containers in a pod start**. They perform **initialization tasks** and ensure the pod environment is ready for the application containers.
+
+**How it works:**
+
+1. A pod can define **one or more init containers** in its manifest.
+2. Init containers **run sequentially**, one after another.
+3. Each init container must **complete successfully** before the main application containers start.
+4. If an init container fails, Kubernetes **retries it until it succeeds**.
+
+**Why they are used:**
+
+- **Pre-initialization:** Set up environment, fetch secrets, or configure settings before main app starts.
+- **Dependency handling:** Wait for external services or databases to be available.
+- **Security isolation:** Init containers can run with **different privileges** from main containers.
+
+**Example scenario:**
+
+- A web app pod needs a **configuration file from a remote storage**.
+- You create an **init container** that downloads the file into a shared volume.
+- Only after the init container completes does the main container (web app) start.
+
+---
+
+## 24. What is a sidecar container?
+
+A **sidecar container** is a **secondary container in a pod** that runs alongside the main application container to provide **supporting functionality**. Unlike init containers, **sidecars run concurrently** with the main container for the lifetime of the pod.
+
+**How it works:**
+
+1. A pod can have **one main container** and **one or more sidecar containers**.
+2. Sidecars share:
+    - **Network namespace** → can communicate with main container via [`localhost`](http://localhost)
+    - **Volumes** → share files, logs, or configuration
+3. Sidecars **enhance or extend the main application** without changing its code.
+
+**Why it is used:**
+
+- **Logging / monitoring:** Collect and forward logs (e.g., Fluentd, Logstash).
+- **Proxies:** Add service mesh functionality (e.g., Envoy in Istio).
+- **Data synchronization:** Sync files, configs, or secrets from external sources.
+- **Security / authentication:** Handle certificates, tokens, or encryption for main app.
+
+**Example scenario:**
+
+- Main container: Nginx web server
+- Sidecar container: Log collector that streams logs to a central server
+- Both containers write logs to a **shared volume** so the main container doesn't need to manage logging itself.
