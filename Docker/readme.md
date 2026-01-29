@@ -340,3 +340,89 @@ A **multi-stage Docker build** uses **multiple `FROM` stages** in a single Docke
 
 - **Smaller image size**
 - **More secure** (no build tools in production image)
+
+---
+
+# 15. How do you reduce Docker image size?
+
+**1️⃣ Use a smaller base image**
+
+- Prefer `alpine` or slim images.
+
+👉 Reduces unnecessary OS packages.
+
+**2️⃣ Use multi-stage builds**
+
+- Keep build tools out of the final image.
+
+👉 Results in much smaller production images.
+
+**3️⃣ Leverage Docker cache properly**
+
+- Copy only required files early (`package.json` before source).
+
+👉 Avoids rebuilding heavy layers.
+
+**4️⃣ Remove unnecessary files**
+
+- Use `.dockerignore` to exclude logs, `.git`, tests.
+
+---
+
+# 16. What is `.dockerignore` and why is it important?
+
+**`.dockerignore`** is a file that tells Docker **which files and folders to exclude** when building an image.
+
+### How It Works (1–2 Points)
+
+- Docker ignores listed files during `docker build`.
+- These files are **not sent to the Docker daemon**.
+
+### Why It's Important
+
+- **Reduces image size**
+- **Speeds up build time**
+- Prevents **sensitive or unnecessary files** from entering the image
+
+### Simple Example
+
+```
+node_modules
+.git
+.env
+logs/
+```
+
+---
+
+# 17. Difference between volumes and bind mounts
+
+| **Feature** | **Volumes** | **Bind Mounts** |
+| --- | --- | --- |
+| Managed by | Docker | Host filesystem |
+| Location | Docker-controlled directory | Any path on host |
+| Portability | High | Low |
+| Security | Safer (isolated) | Less safe (full host access) |
+| Common use | Production data | Local development |
+
+Key Explanation (1–2 Points)
+
+Volumes
+
+Fully managed by Docker
+
+Preferred for production and persistent data
+
+Bind Mounts
+
+Directly map a host directory into a container
+
+Useful for development and debugging
+
+Simple Example
+# Volume
+docker run -v mydata:/app/data myapp
+
+
+# Bind mount
+docker run -v /host/data:/app/data myapp+
