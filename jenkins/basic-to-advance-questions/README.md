@@ -574,3 +574,747 @@ pipeline {
 ## 🔹 Jenkins Security
 
 ### 20. How do you secure Jenkins?
+
+**Securing Jenkins** is critical because it's a central automation tool that can **access code, servers, and production environments**. Here's an interview-level explanation:
+
+### 1. Enable Authentication and Authorization:
+
+- Go to **Manage Jenkins → Configure Global Security**.
+- Enable **"Jenkins' own user database"** or integrate with **LDAP/Active Directory**.
+- Use **Matrix-based or Role-based security** to control **who can view or modify jobs**.
+
+**Why:** Prevents **unauthorized access** to pipelines, builds, and sensitive credentials.
+
+### 2. Use Credentials and Secret Management:
+
+- Never hard-code passwords, API tokens, or SSH keys in jobs.
+- Store them in **Jenkins Credentials Manager** and reference them in pipelines.
+
+**Example:** Use a Git token or Docker registry password via a credential ID in your Jenkinsfile:
+
+```groovy
+withCredentials([usernamePassword(credentialsId: 'git-token', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+    sh 'git clone https://$USER:$PASS@github.com/user/repo.git'
+}
+```
+
+### 3. Restrict Network Access:
+
+- Run Jenkins behind a **firewall or reverse proxy** (e.g., Nginx) with **HTTPS**.
+- Limit access to the Jenkins server by IP or VPN.
+
+**Optional steps:**
+
+- Regularly **update Jenkins and plugins** to fix vulnerabilities.
+- Disable **script approval for untrusted scripts**.
+- Enable **audit logging** for monitoring user actions.
+
+**Example scenario:**
+
+- Only DevOps engineers have **job creation and deployment permissions**, developers can trigger builds, and all credentials are encrypted.
+- This setup **prevents accidental deployments or credential leaks**, which is critical in production environments.
+
+---
+
+## 21. What is Role-Based Access Control (RBAC)?
+
+**Role-Based Access Control (RBAC)** in Jenkins is a **security mechanism to control who can do what** by assigning **roles to users or groups**.
+
+### How it works:
+
+- Users are assigned **roles** (e.g., Admin, Developer, Viewer).
+- Each role has **permissions**, like creating jobs, building jobs, or configuring Jenkins.
+- Jenkins checks a user's role before allowing any action.
+
+### Why it is used:
+
+- Ensures **least-privilege access**, so users can only perform actions they are allowed to.
+- Prevents accidental or malicious changes in jobs, pipelines, or credentials.
+
+### Example scenario:
+
+- **Admin role:** Can create jobs, manage plugins, and configure Jenkins.
+- **Developer role:** Can trigger builds and view logs, but cannot change job configurations.
+- **Viewer role:** Can only see job statuses and build results.
+
+---
+
+## 22. How do you store secrets in Jenkins?
+
+In Jenkins, **secrets (like passwords, API tokens, SSH keys)** are stored **securely using the Credentials Manager** rather than hard-coding them in jobs or pipelines.
+
+### How it works:
+
+1. Go to **Manage Jenkins → Credentials → System → Global credentials**.
+2. Add a secret by selecting the type:
+    - **Username with password**
+    - **Secret text** (API tokens)
+    - **SSH private key**
+    - **Certificate**
+3. Jenkins **encrypts the secrets** in its home directory (/var/lib/jenkins/credentials.xml) and allows jobs or pipelines to access them **by ID**, without exposing the value.
+
+### Using secrets in pipelines:
+
+- Use the **withCredentials block** to inject secrets as environment variables:
+
+```groovy
+pipeline {
+    agent any
+    stages {
+        stage('Checkout') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'git-token', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh 'git clone https://$USER:$PASS@github.com/user/repo.git'
+                }
+            }
+        }
+    }
+}
+```
+
+### Why it is used:
+
+- Prevents **hard-coded secrets** in code or job configurations.
+- Supports **centralized, encrypted secret management**, making pipelines safer.
+- Allows **controlled access**: only jobs that reference the credential ID can use it.
+
+### Example scenario:
+
+- A Jenkins job needs to push a Docker image to a private registry. The **registry password** is stored in credentials and injected at build time, so it is never exposed in logs or scripts.
+
+---
+
+## 23. What are Jenkins credentials types?
+
+In Jenkins, **credentials** are used to store **sensitive information securely** and allow pipelines or jobs to access it without exposing it in code. Jenkins supports **different types of credentials** depending on the use case.
+
+### 1. Username with Password
+
+- Stores a **username and password pair**, commonly used for Git, Docker, or other services.
+- Example: Git repository authentication with a user and password or token.
+
+### 2. Secret Text
+
+- Stores a **single secret string**, like an API token, personal access token, or password.
+- Example: GitHub token or Slack webhook token.
+
+### 3. SSH Private Key
+
+- Stores **SSH keys** for secure access to servers or repositories.
+- Can be **directly entered or loaded from a file**.
+- Example: Deploying code via SSH to a production server.
+
+### 4. Certificate
+
+- Stores **X.509 certificates** and their associated private keys.
+- Example: Authenticating to HTTPS endpoints or services requiring client certificates.
+
+### 5. Secret File
+
+- Stores a **file securely**, which can be used by a job or pipeline.
+- Example: A JSON key file for Google Cloud service accounts.
+
+---
+
+## 24. How do you mask sensitive data in logs?
+
+In Jenkins, **masking sensitive data in logs** ensures that secrets like passwords, API tokens, or keys **do not appear in console output**, preventing accidental exposure.
+
+### How it works:
+
+1. Use the **withCredentials** step in pipelines. Jenkins automatically masks credentials referenced inside this block.
+2. Use the **"Mask Passwords" plugin** for freestyle jobs or additional masking in logs.
+
+### Example in Declarative Pipeline:
+
+```groovy
+pipeline {
+    agent any
+    stages {
+        stage('Deploy') {
+            steps {
+                withCredentials([string(credentialsId: 'API_TOKEN', variable: 'TOKEN')]) {
+                    // TOKEN will be masked in Jenkins logs
+                    sh 'curl -H "Authorization: Bearer $TOKEN" https://api.example.com/deploy'
+                }
+            }
+        }
+    }
+}
+```
+
+- In the console output, $TOKEN will appear as  instead of the actual value.
+
+### Why it is used:
+
+- Prevents **accidental exposure of secrets** in build logs.
+- Maintains **security compliance** and protects production credentials.
+
+### Example scenario:
+
+- During a deployment, the API token is needed for authentication. Using withCredentials ensures the token is **never printed in logs**, even if the job fails or errors occur.
+
+---
+
+## 25. What is CSRF protection in Jenkins?
+
+**CSRF Protection in Jenkins** refers to a **security mechanism that prevents Cross-Site Request Forgery attacks**.
+
+### How it works:
+
+- CSRF occurs when a malicious website tricks a user's browser into performing **unintended actions on Jenkins** (like triggering a build or changing configuration) without their consent.
+- Jenkins protects against this by **requiring a unique token (crumb)** for state-changing requests (POST requests).
+- The token ensures that **only legitimate requests from the Jenkins UI or approved scripts** are accepted.
+
+### Why it is used:
+
+- Prevents **unauthorized actions** via malicious web pages or scripts.
+- Ensures that only users who **actually intend to perform an action** can execute it, protecting jobs, credentials, and pipelines.
+
+### Example scenario:
+
+- Without CSRF protection, a user logged into Jenkins could unknowingly visit a malicious site that triggers **a deployment job**.
+- With CSRF enabled, Jenkins rejects the request unless it contains the **correct crumb**, stopping unauthorized actions.
+
+### Where to enable:
+
+- Go to **Manage Jenkins → Configure Global Security → Prevent Cross Site Request Forgery exploits** and enable it.
+
+---
+
+# 🔹 Jenkins with Docker & Kubernetes
+
+## 26. How do you run Jenkins inside Docker?
+
+Running **Jenkins inside Docker** is a common practice to make it **portable, isolated, and easy to manage**. Here's an interview-level explanation:
+
+### How it works:
+
+- Jenkins runs as a **Docker container**, so you don't need to install it directly on the host.
+- You can **mount volumes** to persist data like jobs, plugins, and configurations.
+- Ports are mapped to allow access from the browser.
+
+### Step-by-step example (using Docker CLI):
+
+**1. Pull the official Jenkins image:**
+
+```bash
+docker pull jenkins/jenkins:lts
+```
+
+**2. Run Jenkins container with persistent storage:**
+
+```bash
+docker run -d \
+  -p 8080:8080 \
+  -p 50000:50000 \
+  -v jenkins_home:/var/jenkins_home \
+  --name jenkins_server \
+  jenkins/jenkins:lts
+```
+
+**Explanation:**
+
+- `-p 8080:8080` → exposes Jenkins web UI.
+- `-p 50000:50000` → required for agents/slaves to connect.
+- `-v jenkins_home:/var/jenkins_home` → persists jobs, plugins, and configs outside the container.
+
+**3. Access Jenkins UI:**
+
+- Open a browser: http://<docker-host-ip>:8080
+- Unlock using the **initial admin password**:
+
+```bash
+docker exec jenkins_server cat /var/jenkins_home/secrets/initialAdminPassword
+```
+
+### Why run Jenkins in Docker:
+
+- **Isolation:** Runs independently of host OS.
+- **Portability:** Easy to move or replicate environments.
+- **Scalability:** Multiple Jenkins instances or agents can run as containers.
+
+### Example scenario:
+
+- You can spin up a **Jenkins test environment in minutes** for experimentation without affecting the host system.
+- Production pipelines run on a containerized Jenkins with mounted volumes for persistence.
+
+This setup is widely used in **modern DevOps practices** and is a frequent interview topic.
+
+---
+
+## 27. What is Docker-in-Docker?
+
+**Docker-in-Docker (DinD)** is a setup where **a Docker container runs its own Docker daemon** and can build or run other containers **inside itself**.
+
+### How it works:
+
+- Normally, Docker containers share the host's Docker daemon.
+- With DinD, a container runs a **full Docker engine inside it**, so it can **build, run, and manage containers independently**.
+- This is often used in **CI/CD pipelines**, where the Jenkins container needs to **build or test Docker images**.
+
+### Why it is used:
+
+- Allows **isolated Docker builds** in CI/CD without affecting the host Docker environment.
+- Useful in **pipeline jobs that build Docker images or run integration tests** in containers.
+
+### Example scenario with Jenkins:
+
+- A Jenkins pipeline runs inside a Docker container.
+- The pipeline needs to **build a Docker image for the app**.
+- Using DinD, the Jenkins container can execute:
+
+```bash
+docker build -t my-app:latest .
+docker run --rm my-app:latest
+```
+
+- All Docker operations happen **inside the Jenkins container**, isolated from the host.
+
+---
+
+## 28. How do you use Jenkins with Kubernetes?
+
+Using **Jenkins with Kubernetes** allows you to run **builds and agents dynamically in a Kubernetes cluster**, making your CI/CD pipelines **scalable, efficient, and cloud-native**.
+
+### How it works:
+
+1. Jenkins runs as a **master/controller** (can be a pod in Kubernetes).
+2. The **Kubernetes plugin** allows Jenkins to **dynamically provision agents (pods) for each job**.
+3. When a pipeline runs, Jenkins asks Kubernetes to **create an agent pod** with the required tools (Docker, Java, Node, etc.).
+4. After the job completes, the pod is **deleted automatically**, saving resources.
+
+### Setup overview:
+
+1. **Install Kubernetes plugin in Jenkins**.
+2. **Configure Kubernetes cloud** in Jenkins:
+    - Provide **API server URL** and **credentials** (service account token).
+    - Define **pod templates** specifying containers and tools needed for builds.
+3. **Use agents in pipelines**:
+
+```groovy
+pipeline {
+    agent {
+        kubernetes {
+            label 'k8s-agent'
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
+    args: ['\$(JENKINS_SECRET)', '\$(JENKINS_NAME)']
+  - name: docker
+    image: docker:20.10.16
+    command:
+    - cat
+    tty: true
+"""
+        }
+    }
+    stages {
+        stage('Build') {
+            steps {
+                container('docker') {
+                    sh 'docker build -t my-app:latest .'
+                }
+            }
+        }
+    }
+}
+```
+
+### Why it is used:
+
+- **Scales dynamically**: Only spins up agents when needed.
+- **Optimizes resources**: Pods are deleted after the job.
+- **Supports multiple environments**: Each pod can have a different toolset for different jobs.
+
+### Example scenario:
+
+- Jenkins master runs in Kubernetes.
+- A pipeline to build a Node.js app spins up a pod with Node.js and Docker installed.
+- The build, test, and deployment steps run inside the pod, which is deleted after the job finishes.
+
+---
+
+## 29. What is Jenkins Kubernetes plugin?
+
+The **Jenkins Kubernetes Plugin** is an **integration plugin** that allows Jenkins to **dynamically create and manage build agents (pods) inside a Kubernetes cluster**.
+
+### How it works:
+
+1. Jenkins (master) connects to a **Kubernetes cluster** using API credentials.
+2. The plugin uses **pod templates** to define the containers, tools, and resources each agent pod should have.
+3. When a job or pipeline needs to run, Jenkins **requests Kubernetes to spin up a pod** with the defined configuration.
+4. The pod runs the job and is **automatically deleted after the job finishes**, freeing resources.
+
+### Why it is used:
+
+- Enables **dynamic, on-demand agents**, so you don't need to maintain a permanent pool of Jenkins nodes.
+- Supports **multiple environments**: each job can run in a pod with the exact tools it needs.
+- **Optimizes resources** in cloud-native or containerized CI/CD pipelines.
+
+### Example scenario:
+
+- A Jenkins pipeline needs Docker and Node.js for a build.
+- The Kubernetes plugin spins up a **temporary pod** with Docker and Node.js containers.
+- The build and tests run inside the pod, then it is **deleted automatically**, leaving the cluster clean.
+
+---
+
+## 30. How do you dynamically create agents in Kubernetes?
+
+In Jenkins, you can **dynamically create agents in Kubernetes** using the **Kubernetes plugin**, which spins up **pods as agents on demand** whenever a job or pipeline runs. This ensures scalability and resource efficiency.
+
+### How it works:
+
+**1. Configure Kubernetes Cloud in Jenkins:**
+
+- Go to **Manage Jenkins → Configure System → Cloud → Kubernetes**.
+- Provide the **Kubernetes API server URL** and **credentials** (service account token or kubeconfig).
+- Define **namespace, labels, and default pod templates**.
+
+**2. Define Pod Templates:**
+
+- A pod template specifies **containers, tools, and resources** the agent pod will have.
+- Each pipeline stage can request a pod with the tools it needs.
+
+**3. Use dynamic agents in pipelines:**
+
+In Declarative Pipeline:
+
+```groovy
+pipeline {
+    agent {
+        kubernetes {
+            label 'k8s-agent'
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
+    args: ['\$(JENKINS_SECRET)', '\$(JENKINS_NAME)']
+  - name: docker
+    image: docker:20.10.16
+    command:
+    - cat
+    tty: true
+"""
+        }
+    }
+    stages {
+        stage('Build') {
+            steps {
+                container('docker') {
+                    sh 'docker build -t my-app:latest .'
+                }
+            }
+        }
+    }
+}
+```
+
+- Jenkins requests a pod with the docker container.
+- The pod is created **dynamically**, runs the job, and is **deleted automatically** after completion.
+
+### Why it is used:
+
+- **Scales automatically** based on job demand.
+- **Optimizes cluster resources**: idle agents don't consume memory/CPU.
+- Allows each job to **run in a clean, isolated environment**, avoiding conflicts between builds.
+
+### Example scenario:
+
+- You have multiple pipelines requiring different tools (Node.js, Python, Docker).
+- Each pipeline creates a **temporary pod** with only the required tools.
+- After the build, pods are deleted, keeping the Kubernetes cluster **clean and efficient**.
+
+# 🔹 Jenkins Performance & Troubleshooting
+
+## 31. Jenkins job is slow — how do you troubleshoot?
+
+If a **Jenkins job is slow**, troubleshooting requires a **systematic approach** to identify whether the bottleneck is in **Jenkins itself, the job configuration, or external dependencies**. Here's an interview-level explanation:
+
+### 1. Check Build Logs and Console Output
+
+- Look for **stages that take unusually long**.
+- Sometimes **tests or deployment steps** are the bottleneck.
+
+**Example:**
+
+- A Maven build is slow because of repeated **dependency downloads**.
+
+### 2. Check Workspace and Artifacts
+
+- Large workspaces or unnecessary files can **increase build time**.
+- Consider **cleaning workspace** or using **artifact caching**.
+
+### 3. Analyze Jenkins Master/Agent Performance
+
+- High CPU, memory usage, or disk I/O on the master or agent can slow jobs.
+- Check **system metrics**:
+    - `top` or `htop` on agents
+    - Jenkins Monitoring plugin
+- Consider **adding more agents** or **running heavy jobs on dedicated nodes**.
+
+### 4. Evaluate Job Configuration
+
+- Freestyle jobs might perform **redundant steps**; pipelines allow **parallel stages**.
+- Using **parallelization** in Declarative Pipelines can speed up builds:
+
+```groovy
+stage('Test') {
+    parallel {
+        stage('Unit Tests') { steps { sh 'make test-unit' } }
+        stage('Integration Tests') { steps { sh 'make test-integration' } }
+    }
+}
+```
+
+### 5. Check External Dependencies
+
+- Slow Git clone, artifact download, or external API calls can **bottleneck builds**.
+- Use **local mirrors or caching** to reduce latency.
+
+### Why this approach works:
+
+- It identifies whether the delay is due to **Jenkins infrastructure, job design, or external factors**.
+- Allows targeted optimizations instead of blindly changing settings.
+
+### Example scenario:
+
+- Job takes 30 minutes. Analysis shows 25 minutes spent downloading Maven dependencies.
+- Solution: enable **Maven local repository caching on agents** → build time drops to 5 minutes.
+
+---
+
+## 32. What causes Jenkins to crash?
+
+**Jenkins can crash** due to a variety of reasons related to **resource limitations, misconfigurations, or plugin issues**. Here's an interview-level explanation:
+
+### 1. Insufficient System Resources
+
+- Jenkins runs on **Java (JVM)**, so **high CPU or memory usage** can cause crashes.
+- Large jobs, many concurrent builds, or heavy pipelines can **exceed JVM heap**, causing OutOfMemoryErrors.
+
+**Example:**
+
+- Running multiple Docker builds simultaneously on an agent with 2GB RAM may crash Jenkins.
+
+### 2. Faulty or Incompatible Plugins
+
+- Plugins extend Jenkins functionality, but **incompatible or outdated plugins** can cause errors or crashes.
+- Installing multiple plugins at once without checking dependencies may **break the Jenkins core**.
+
+**Example:**
+
+- A pipeline plugin update incompatible with the Kubernetes plugin could prevent agents from launching and crash the master.
+
+### 3. Disk Space or I/O Issues
+
+- Jenkins stores jobs, builds, logs, and artifacts in `/var/lib/jenkins` (or home directory).
+- If disk space runs out, Jenkins can **fail to write files**, stop builds, or crash.
+
+### 4. JVM or System-Level Errors
+
+- Improper JVM configuration (heap size too low) or OS-level limits (file descriptors, threads) can cause Jenkins instability.
+- Example: `Too many open files` error in Unix systems during concurrent builds.
+
+### How to prevent crashes:
+
+- Monitor **system resources** (CPU, memory, disk).
+- Regularly **update Jenkins and plugins**, checking for compatibility.
+- Use **separate agents for heavy workloads**.
+- Configure **JVM heap size** appropriately:
+
+```bash
+java -Xmx4g -jar jenkins.war
+```
+
+---
+
+## 33. How do you back up Jenkins?
+
+**Backing up Jenkins** is essential to **protect jobs, pipelines, plugins, and configurations** in case of failures, crashes, or migrations.
+
+### How it works:
+
+Jenkins stores all important data in the **Jenkins Home Directory** (`/var/lib/jenkins` by default). This includes:
+
+- Jobs and pipelines (`jobs/`)
+- Plugins (`plugins/`)
+- Credentials (`credentials.xml`)
+- Configuration files (`config.xml`)
+- Build history (`builds/`)
+
+**Backing up this directory effectively backs up Jenkins.**
+
+### Backup Methods:
+
+**1. Manual Backup:**
+
+- Stop Jenkins:
+
+```bash
+sudo systemctl stop jenkins
+```
+
+- Copy the Jenkins home directory to a backup location:
+
+```bash
+cp -r /var/lib/jenkins /backup/jenkins_backup_$(date +%F)
+```
+
+- Restart Jenkins:
+
+```bash
+sudo systemctl start jenkins
+```
+
+**2. Using Plugins:**
+
+- **ThinBackup Plugin**: Automates periodic backups of jobs, plugins, and configurations.
+- **Backup Plugin**: Offers scheduled backups and restores.
+
+**3. Using Version Control:**
+
+- Store **Jenkinsfile and job configs** in Git to easily restore pipelines.
+- Useful for **pipeline-as-code setups**, but does not cover plugins or credentials.
+
+### Why it is used:
+
+- Protects against **system crashes, accidental deletions, or server migration**.
+- Enables **quick restoration** in production environments.
+
+### Example scenario:
+
+- Jenkins master crashes due to disk failure.
+- You restore `/var/lib/jenkins` from backup → all jobs, pipelines, and credentials are recovered without data loss.
+
+---
+
+## 34. Where are Jenkins logs stored?
+
+**Jenkins logs** are stored in **different locations** depending on the type of log.
+
+### 1. Jenkins System Logs:
+
+- On Linux, Jenkins service logs are usually stored at:
+
+```bash
+/var/log/jenkins/jenkins.log
+```
+
+- These logs contain **startup messages, plugin loading errors, and system-level issues**.
+
+### 2. Job / Build Logs:
+
+- Each job's console output is stored inside the Jenkins home directory:
+
+```bash
+/var/lib/jenkins/jobs/<job-name>/builds/<build-number>/log
+```
+
+- These logs show **build steps, errors, and command output** for that specific build.
+
+### Why this matters:
+
+- System logs help troubleshoot **Jenkins crashes or startup failures**.
+- Job logs help debug **pipeline or build failures**.
+
+### Example:
+
+- If Jenkins fails to start after a plugin upgrade, you check `/var/log/jenkins/jenkins.log`.
+- If a build fails, you check the job's build log inside `/var/lib/jenkins/jobs/`.
+
+---
+
+## 35. How do you clean up old builds?
+
+To **clean up old builds in Jenkins**, you use **build retention and cleanup strategies** to free disk space and keep Jenkins stable.
+
+### 1. Using "Discard Old Builds" (Recommended):
+
+- Go to **Job Configuration → Build Discarder**.
+- Enable **"Discard old builds"**.
+- Set limits like:
+    - **Max number of builds** (e.g., keep last 10 builds)
+    - **Max build age** (e.g., keep builds for 30 days)
+
+**Why:** Automatically deletes old build logs and artifacts.
+
+### 2. Global Build Discarder (Pipeline-friendly):
+
+- In a **Declarative Pipeline**, you can define it in the Jenkinsfile:
+
+```groovy
+pipeline {
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10', daysToKeepStr: '30'))
+    }
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                sh 'make'
+            }
+        }
+    }
+}
+```
+
+### 3. Clean Workspace:
+
+- Enable **"Delete workspace before build starts"** or use:
+
+```groovy
+cleanWs()
+```
+
+- This removes unnecessary files that slow builds.
+
+---
+
+## 36. How do you handle disk space issues in Jenkins?
+
+Disk space issues in Jenkins are common because Jenkins stores build logs, artifacts, workspaces, and plugins. Handling them requires prevention and cleanup.
+
+### 1. Clean Old Builds and Artifacts
+
+- Enable Discard Old Builds in job configuration.
+- Limit the number of builds and build age.
+
+**Why:** Old builds and artifacts consume most disk space.
+
+### 2. Clean Workspaces Regularly
+
+- Use Workspace Cleanup plugin or pipeline step:
+
+```groovy
+cleanWs()
+```
+
+- Especially important for large projects (Docker, Maven, Node modules).
+
+### 3. Monitor Jenkins Home Directory
+
+- Jenkins stores data in `/var/lib/jenkins`.
+- Regularly check disk usage:
+
+```bash
+du -sh /var/lib/jenkins/*
+```
+
+### 4. Move Jenkins Data to Larger Disk
+
+- Mount `/var/lib/jenkins` on a separate or larger volume (EBS, NFS, etc.).
+- Common in production setups.
+
+### 5. Remove Unused Plugins and Logs
+
+- Delete unused jobs, plugins, and old system logs.
+- Restart Jenkins after cleanup if needed.
