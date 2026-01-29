@@ -423,6 +423,40 @@ Simple Example
 # Volume
 docker run -v mydata:/app/data myapp
 
-
 # Bind mount
 docker run -v /host/data:/app/data myapp+
+
+---
+
+# 18. Containers communicate over networks, just like normal machines.
+
+1️⃣ Same Docker Network (Most Common)
+
+Containers attached to the same network can talk using container names.
+
+Docker provides built-in DNS.
+
+👉 Example:
+app → db using db:5432
+
+2️⃣ Using Ports (Across Networks or Host)
+
+One container exposes a port.
+
+Another container or host accesses it via IP:port.
+
+👉 Example:
+localhost:8080
+
+3️⃣ Overlay Network (Multi-Host)
+
+Used in Docker Swarm / Kubernetes.
+
+Containers communicate across different hosts.
+
+Simple Example
+docker network create mynet
+docker run --name db --network mynet postgres
+docker run --name app --network mynet myapp
+
+app connects to db using hostname db.
