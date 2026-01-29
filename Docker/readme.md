@@ -428,35 +428,421 @@ docker run -v /host/data:/app/data myapp+
 
 ---
 
-# 18. Containers communicate over networks, just like normal machines.
+# 18. How do containers communicate with each other?
 
-1️⃣ Same Docker Network (Most Common)
+Containers communicate **over networks**, just like normal machines.
 
-Containers attached to the same network can talk using container names.
+### 1️⃣ Same Docker Network (Most Common)
 
-Docker provides built-in DNS.
-
-👉 Example:
-app → db using db:5432
-
-2️⃣ Using Ports (Across Networks or Host)
-
-One container exposes a port.
-
-Another container or host accesses it via IP:port.
+- Containers attached to the **same network** can talk using **container names**.
+- Docker provides **built-in DNS**.
 
 👉 Example:
-localhost:8080
 
-3️⃣ Overlay Network (Multi-Host)
+`app` → `db` using `db:5432`
 
-Used in Docker Swarm / Kubernetes.
+### 2️⃣ Using Ports (Across Networks or Host)
 
-Containers communicate across different hosts.
+- One container **exposes a port**.
+- Another container or host accesses it via **IP:port**.
 
-Simple Example
+👉 Example:
+
+[`localhost:8080`](http://localhost:8080)
+
+### 3️⃣ Overlay Network (Multi-Host)
+
+- Used in **Docker Swarm / Kubernetes**.
+- Containers communicate across **different hosts**.
+
+### Simple Example
+
+```bash
 docker network create mynet
 docker run --name db --network mynet postgres
 docker run --name app --network mynet myapp
+```
 
-app connects to db using hostname db.
+`app` connects to `db` using hostname `db`.
+
+---
+
+# 19. How do you pass environment variables to a container?
+
+### 1️⃣ Using `-e` Flag
+
+- Pass variables directly at runtime.
+
+```bash
+docker run -e ENV=prod -e DEBUG=false myapp
+```
+
+### 2️⃣ Using `.env` File
+
+- Store variables in a file and load them together.
+
+```bash
+docker run --env-file .env myapp
+```
+
+### 3️⃣ Using Dockerfile (`ENV`)
+
+- Sets default environment variables inside the image.
+
+```docker
+ENV APP_ENV=prod
+```
+
+---
+
+# 🔹 Advanced Docker Questions
+
+---
+
+# 20. How does Docker use Linux namespaces and cgroups?
+
+Docker relies on **Linux kernel features** to provide **isolation and resource control** for containers.
+
+### 1️⃣ Linux Namespaces (Isolation)
+
+Namespaces isolate what a container can **see**.
+
+- **PID namespace** → separate process tree
+- **Network namespace** → own IP, ports
+- **Mount namespace** → own filesystem view
+- **UTS namespace** → own hostname
+
+👉 **Result:** Each container thinks it has its **own system**.
+
+### 2️⃣ cgroups (Control Groups) (Resource Control)
+
+cgroups limit **how much resources** a container can use.
+
+- CPU usage
+- Memory limits
+- Disk I/O
+
+👉 **Result:** One container cannot **starve others** of resources.
+
+### Why Both Are Needed (1–2 Points)
+
+- **Namespaces** provide isolation
+- **cgroups** provide resource limits
+
+Together, they make containers **lightweight and safe**.
+
+---
+
+# 21. What is the difference between `EXPOSE` and `-p`?
+
+| **Feature** | **EXPOSE** | **-p (port mapping)** |
+| --- | --- | --- |
+| Defined where | Dockerfile | `docker run` command |
+| Purpose | Documentation / metadata | Actually publishes the port |
+| Opens port? | ❌ No | ✅ Yes |
+| Required for access | No | Yes (for external access) |
+
+### Key Explanation (1–2 Points)
+
+**EXPOSE**
+
+- Tells Docker **which port the container listens on**
+- Used by tools like Docker Compose
+
+**-p**
+
+- Maps **container port to host port**
+- Enables access from outside the container
+
+### Example
+
+```docker
+EXPOSE 8080
+```
+
+```bash
+docker run -p 8080:8080 myapp
+```
+
+---
+
+# 22. How do you debug a failing container?
+
+**1️⃣ Check Container Status**
+
+- See if it's running, exited, or restarting.
+
+```bash
+docker ps -a
+```
+
+**2️⃣ Check Container Logs**
+
+- Most failures are visible in logs.
+
+```bash
+docker logs <container_id>
+```
+
+**3️⃣ Inspect Exit Code**
+
+- Helps identify crash or misconfiguration.
+
+```bash
+docker inspect <container_id> | grep ExitCode
+```
+
+**4️⃣ Run Container Interactively**
+
+- Useful to debug startup issues.
+
+```bash
+docker run -it --entrypoint sh <image>
+```
+
+**5️⃣ Check Ports, Env, Volumes**
+
+- Verify port mapping, environment variables, and mounted volumes.
+
+---
+
+# 23. What is Docker Swarm? How is it different from Kubernetes?
+
+**Docker Swarm** is Docker's **native container orchestration tool** used to **manage and scale containers** across multiple hosts.
+
+### Key Features (1–2 Points)
+
+- Simple setup using Docker CLI
+- Built-in **service discovery, load balancing, and scaling**
+
+### Docker Swarm vs Kubernetes
+
+| **Feature** | **Docker Swarm** | **Kubernetes** |
+| --- | --- | --- |
+| Complexity | Simple | Complex |
+| Setup | Easy | Steep learning curve |
+| Scalability | Good | Excellent (enterprise-grade) |
+| Ecosystem | Smaller | Very large |
+| Use case | Small to medium setups | Large, production systems |
+
+### Simple Example
+
+- Swarm: `docker service scale web=5`
+- Kubernetes: `kubectl scale deployment web --replicas=5`
+
+---
+
+# 24. Explain Docker overlay networks
+
+A **Docker overlay network** allows **containers running on different Docker hosts** to **communicate as if they are on the same network**.
+
+### How It Works (1–2 Points)
+
+- Uses **VXLAN tunneling** to encapsulate container traffic.
+- Docker handles **service discovery and routing** automatically.
+
+### When It's Used
+
+- In **Docker Swarm** or multi-host container setups
+- For **distributed microservices**
+
+### Simple Example
+
+```bash
+docker network create -d overlay my-overlay
+```
+
+Containers on different nodes can now communicate using **service names**.
+
+### Why It's Important (1 Point)
+
+- Enables **scalable, multi-host container networking** without manual configuration.
+
+---
+
+# 25. How do you secure Docker containers?
+
+I focus on **image security, runtime isolation, and access control**.
+
+**1️⃣ Use Secure & Minimal Images**
+
+- Use **official or trusted images**
+- Prefer **alpine/slim** images to reduce attack surface
+
+👉 Fewer packages = fewer vulnerabilities.
+
+**2️⃣ Run Containers with Least Privilege**
+
+- Avoid running containers as **root**
+- Use `USER` in Dockerfile
+
+👉 Limits damage if a container is compromised.
+
+**3️⃣ Scan Images for Vulnerabilities**
+
+- Scan images during CI/CD (e.g., Trivy, Docker scan)
+
+👉 Catches known CVEs early.
+
+**4️⃣ Limit Resources & Capabilities**
+
+- Use CPU/memory limits
+- Drop unnecessary Linux capabilities
+
+👉 Prevents resource abuse and privilege escalation.
+
+**5️⃣ Secure Secrets & Networking**
+
+- Don't hardcode secrets in images
+- Restrict container-to-container communication using networks
+
+---
+
+# 26. What are rootless containers?
+
+**Rootless containers** are containers that **run without root (admin) privileges** on the host system.
+
+### How They Work (1–2 Points)
+
+- The container engine runs as a **normal user**, not root.
+- Uses **user namespaces** to map container root → non-root host user.
+
+👉 Inside the container it *looks* like root, but on the host it's not.
+
+### Why Rootless Containers Are Important
+
+- **Improves security** by reducing privilege escalation risk
+- Even if a container is compromised, the attacker **cannot gain root access** on the host
+
+### Example
+
+Docker can be run in rootless mode:
+
+```bash
+dockerd-rootless-setuptool.sh install
+```
+
+### Limitation (1 Point)
+
+- Some features (low ports, certain storage drivers) may be **restricted**.
+
+---
+
+# 27. How do you scan Docker images for vulnerabilities?
+
+Docker images are scanned to **detect known security vulnerabilities (CVEs)** in OS packages and dependencies.
+
+### 1️⃣ Using Image Scanning Tools (Most Common)
+
+**Trivy (Popular & Simple)**
+
+```bash
+trivy image myapp:latest
+```
+
+- Scans OS packages and application dependencies
+- Shows **severity levels** (LOW, MEDIUM, HIGH, CRITICAL)
+
+**Docker Scan (Built-in)**
+
+```bash
+docker scan myapp:latest
+```
+
+- Uses Snyk under the hood
+- Good for quick checks
+
+### 2️⃣ Integrate Scanning into CI/CD
+
+- Scan images **during build or before deployment**
+- Fail the pipeline if **critical vulnerabilities** are found
+
+👉 Prevents vulnerable images from reaching production.
+
+### Why Image Scanning Is Important (1–2 Points)
+
+- Containers often include **outdated libraries**
+- Early detection reduces **security risk and compliance issues**
+
+### Simple Example Flow
+
+Docker build → **Image scan** → Push to registry → Deploy
+
+---
+
+# 28. What is the difference between `ONBUILD` and normal instructions?
+
+| **Feature** | **Normal Instructions** | **ONBUILD Instructions** |
+| --- | --- | --- |
+| Execution time | During image build | During **child image** build |
+| Scope | Applies to current image | Applies to images built **FROM it** |
+| Visibility | Runs immediately | Deferred execution |
+| Typical use | Standard image creation | Base images for developers |
+
+### Key Explanation (1–2 Points)
+
+**Normal Instructions**
+
+- Executed **when the image is built**
+- Directly affect the current image
+
+**ONBUILD**
+
+- Acts like a **trigger**
+- Runs only when another Dockerfile uses this image as a base
+
+### Simple Example
+
+```docker
+# Base image
+FROM node:18
+ONBUILD COPY . /app
+ONBUILD RUN npm install
+```
+
+```docker
+# Child image
+FROM my-node-base
+```
+
+👉 `COPY` and `RUN` execute **here**, not earlier.
+
+---
+
+# 29. How does Docker handle logs?
+
+Docker handles logs by **capturing stdout and stderr** of containers and sending them to a **logging driver**.
+
+### Default Logging Behavior
+
+- Docker captures application logs written to:
+    - `stdout`
+    - `stderr`
+- Stored as **JSON log files** on the host
+
+```bash
+docker logs <container_id>
+```
+
+### Logging Drivers (How Logs Are Handled)
+
+Docker supports multiple **logging drivers**, such as:
+
+- `json-file` (default)
+- `syslog`
+- `journald`
+- `awslogs`
+- `fluentd`
+
+👉 Drivers define **where and how logs are stored**.
+
+### Example
+
+```bash
+docker run --log-driver=awslogs myapp
+```
+
+### Why This Matters (1–2 Points)
+
+- Keeps containers **stateless**
+- Enables **centralized logging** in production
