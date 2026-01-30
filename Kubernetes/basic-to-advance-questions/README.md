@@ -857,3 +857,1468 @@ A **sidecar container** is a **secondary container in a pod** that runs alongsid
 - Main container: Nginx web server
 - Sidecar container: Log collector that streams logs to a central server
 - Both containers write logs to a **shared volume** so the main container doesn't need to manage logging itself.
+
+**🔹 Networking**
+
+## 25. How does Kubernetes networking work?
+
+**Kubernetes networking defines** how pods, services, and external users communicate with each other **in a cluster. It follows a** simple but powerful model to enable seamless communication.
+
+**Core networking principles:**
+
+1. **Every pod gets its own IP address**
+    - Pods can communicate with each other **directly using pod IPs**, without NAT.
+2. **Pods can talk to nodes and other pods**
+    - No port conflicts because each pod has its own network namespace.
+3. **Networking is implemented by a CNI plugin**
+    - Examples: **Calico, Flannel, Weave, Cilium**
+
+**How it works step by step:**
+
+1. When a pod is created, the **CNI plugin assigns an IP** to the pod.
+2. The CNI sets up routing so that **pods across different nodes can reach each other**.
+3. **kube-proxy** runs on each node and manages traffic routing for Services.
+4. **Services provide stable IPs and DNS names**, even if pods are recreated.
+
+**Key components involved:**
+
+- **Pod-to-Pod networking:**
+    - Uses the cluster network (flat network model).
+- **Service networking:**
+    - Services expose pods using **ClusterIP, NodePort, or LoadBalancer**.
+- **DNS:**
+    - CoreDNS enables service discovery using names like `service-name.namespace`.
+
+**Example flow:**
+
+- Pod A sends a request to `backend-service`.
+- DNS resolves it to a **Service IP**.
+- kube-proxy forwards traffic to one of the **healthy backend pods**.
+- If a pod dies, traffic is automatically routed to another pod.
+
+---
+
+## 26. What is a Service?
+
+In Kubernetes, a **Service** is an abstraction that provides a **stable network endpoint** to access a group of pods, even though pods are **dynamic and can change IPs**.
+
+**Why a Service is needed:**
+
+- Pods are **created and destroyed frequently**, so their IPs change.
+- A Service gives a **fixed IP and DNS name** to access pods.
+- It also provides **load balancing** across multiple pod replicas.
+
+**How it works:**
+
+1. A Service uses **labels and selectors** to identify target pods.
+2. kube-proxy routes traffic sent to the Service IP to one of the matching pods.
+3. If pods are replaced, the Service automatically updates its endpoints.
+
+**Example scenario:**
+
+- You have 3 backend pods with label `app=backend`.
+- A Service selects these pods and exposes them via a single endpoint.
+- Clients use the Service name instead of pod IPs.
+
+---
+
+## 27. Types of Services in Kubernetes?
+
+Kubernetes provides **different Service types** to expose applications **inside or outside the cluster**, depending on the access requirement.
+
+### 1. ClusterIP (Default)
+
+**What it is:**
+
+- Exposes the Service **only inside the cluster**.
+- Assigned an **internal virtual IP**.
+
+**Use case:**
+
+- Backend or internal microservices.
+
+**Example:**
+
+```
+type: ClusterIP
+```
+
+### 2. NodePort
+
+**What it is:**
+
+- Exposes the Service on a **static port** on each node (range: `30000–32767`).
+- Accessible using:
+
+```
+NodeIP:NodePort
+```
+
+**Use case:**
+
+- Simple external access (mainly for testing).
+
+**Example:**
+
+```
+type: NodePort
+```
+
+### 3. LoadBalancer
+
+**What it is:**
+
+- Creates an **external cloud load balancer**.
+- Routes external traffic to nodes → pods.
+
+**Use case:**
+
+- Production-grade external access in cloud environments (AWS, Azure, GCP).
+
+**Example:**
+
+```
+type: LoadBalancer
+```
+
+### 4. ExternalName
+
+**What it is:**
+
+- Maps a Service to an **external DNS name**.
+- No pod selector or proxying.
+
+**Use case:**
+
+- Accessing external services (e.g., external database).
+
+**Example:**
+
+```
+type: ExternalName
+externalName: db.example.com
+```
+
+### Service Type Comparison
+
+| **Service Type** | **Access Scope** | **Common Use** |
+| --- | --- | --- |
+| ClusterIP | Internal only | Internal microservices |
+| NodePort | External via node IP | Testing, demos |
+| LoadBalancer | External via cloud LB | Production apps |
+| ExternalName | External DNS | External dependencies |
+
+---
+
+## 28. What is an Ingress?
+
+**An** Ingress **in Kubernetes is an** API object that manages external HTTP/HTTPS access **to services inside a cluster, usually using** URL paths or domain names**. It acts as a** smart entry point for your applications.
+
+**Why Ingress is used:**
+
+- Avoids creating **multiple LoadBalancer services** (cost-effective).
+- Provides **path-based and host-based routing**.
+- Supports **TLS/SSL termination**.
+- Centralizes traffic management.
+
+**How it works:**
+
+1. You define **Ingress rules** (host/path → service).
+2. An **Ingress Controller** (like NGINX, Traefik, HAProxy) watches these rules.
+3. The controller configures a reverse proxy/load balancer.
+4. External traffic is routed to the correct service based on rules.
+
+**Example scenario:**
+
+- [`example.com/app1`](http://example.com/app1) → frontend service
+- [`example.com/api`](http://example.com/api) → backend service
+- All traffic enters through **one load balancer**.
+
+---
+
+## 29. Difference between Ingress and LoadBalancer?
+
+| **Feature** | **LoadBalancer** | **Ingress** |
+| --- | --- | --- |
+| Kubernetes object | Service | Ingress |
+| Exposes | Single service | Multiple services |
+| Routing | Basic | Advanced (path/host) |
+| TLS termination | Limited | Built-in |
+| Cost | Higher | Lower |
+| Traffic types | Any (TCP/UDP) | HTTP/HTTPS only |
+
+---
+
+## 30. What is CoreDNS?
+
+**CoreDNS** is the **DNS server used by Kubernetes** for **service discovery**. It translates **service and pod names into IP addresses**, allowing applications to communicate using names instead of hard-coded IPs.
+
+**Why CoreDNS is used:**
+
+- Pods and services are **dynamic** and IPs change frequently.
+- CoreDNS provides **name-based discovery** inside the cluster.
+- It replaces the older **kube-dns** with a faster and more flexible solution.
+
+**How it works:**
+
+1. When a pod tries to access a service like `backend-service`, it sends a DNS query.
+2. CoreDNS resolves:
+
+```
+backend-service.namespace.svc.cluster.local
+```
+
+1. CoreDNS returns the **Service IP** (ClusterIP).
+2. Traffic is routed to one of the backend pods via the Service.
+
+**What CoreDNS resolves:**
+
+- **Services:** `service-name.namespace.svc.cluster.local`
+- **Pods (optional):** `pod-ip.namespace.pod.cluster.local`
+- **External domains:** Forwards queries to upstream DNS (e.g., Google DNS)
+
+**Example scenario:**
+
+- Frontend pod calls [`http://api-service`](http://api-service)
+- CoreDNS resolves the name to the API Service IP
+- Request reaches a healthy API pod automatically
+
+---
+
+## 31. How do pods communicate with each other?
+
+Pods in Kubernetes communicate with each other using the **cluster's flat networking model**, where **every pod has its own IP address** and can reach other pods directly.
+
+**Ways pods communicate:**
+
+### 1. Pod-to-Pod (direct)
+
+- Each pod gets a **unique IP**.
+- Pods can talk to each other using **pod IP + port**, even across nodes.
+- No NAT is required.
+
+**Example:**
+
+```
+http://10.244.1.5:8080
+```
+
+⚠️ Pod IPs are not stable, so this method is **not recommended for production**.
+
+### 2. Pod-to-Pod via Service (recommended)
+
+- Pods communicate using a **Service name** instead of pod IP.
+- CoreDNS resolves the service name to a **ClusterIP**.
+- kube-proxy forwards traffic to one of the healthy pods.
+
+**Example:**
+
+```
+http://backend-service:80
+```
+
+### 3. Pods within the same Pod
+
+- Containers in the **same pod**:
+    - Share the **same IP**
+    - Communicate using [`localhost`](http://localhost)
+- Common for **sidecar patterns**.
+
+**Example:**
+
+```
+http://localhost:9000
+```
+
+**Networking components involved:**
+
+- **CNI plugin** (Calico, Flannel): Enables pod networking across nodes
+- **CoreDNS:** Resolves service names
+- **kube-proxy:** Handles service traffic routing
+
+**Example flow:**
+
+1. Frontend pod calls `backend-service`.
+2. CoreDNS resolves it to a Service IP.
+3. kube-proxy routes traffic to a backend pod.
+4. If a pod fails, traffic is redirected automatically.
+
+---
+
+## 32. What is a Network Policy?
+
+A **NetworkPolicy** in Kubernetes is a **security feature** that controls **how pods are allowed to communicate with each other and with external traffic**. It acts like a **firewall for pods**.
+
+**Why NetworkPolicy is used:**
+
+- By default, **all pods can talk to each other** in a cluster.
+- NetworkPolicy allows you to **restrict traffic** for better security.
+- Helps implement **zero-trust networking** in Kubernetes.
+
+**How it works:**
+
+1. NetworkPolicy uses **labels and selectors** to choose target pods.
+2. It defines **ingress (incoming)** and/or **egress (outgoing)** rules.
+3. Once a policy is applied, **only allowed traffic is permitted**; everything else is denied.
+4. Requires a **CNI plugin that supports NetworkPolicy** (e.g., Calico, Cilium).
+
+**Example scenario:**
+
+- Only frontend pods should access backend pods.
+- Database pods should not be accessible from other services.
+
+---
+
+🔹 **Storage & Configuration**
+
+## 33. What is a Volume?
+
+In Kubernetes, a **Volume** is a **storage mechanism** that allows data to **persist beyond a container's lifecycle** inside a pod. It solves the problem of **ephemeral container storage**.
+
+**Why Volume is needed:**
+
+- Containers can be **restarted or recreated**, and their filesystem is lost.
+- Volumes provide **shared and persistent storage** for containers in a pod.
+
+---
+
+## 34. What is StorageClass?
+
+A **StorageClass** in Kubernetes is a way to **define different types of storage** and enable **dynamic provisioning of Persistent Volumes (PVs)** without manual intervention.
+
+**Why StorageClass is used:**
+
+- Avoids **manual creation of PersistentVolumes**.
+- Allows teams to request storage **on demand**.
+- Supports different storage needs like **SSD, HDD, encrypted, high-IOPS**.
+
+---
+
+🔹 **Security**
+
+## 35. How do you secure a Kubernetes cluster?
+
+Securing a Kubernetes cluster means protecting **access, workloads, network, and data**. Interviewers usually expect a **layered (defense-in-depth) answer**, not just one control.
+
+### 1. Secure cluster access
+
+- Use **RBAC** to give users and services **least-privilege access**.
+- Disable anonymous access to the **kube-apiserver**.
+- Use **strong authentication** (certs, OIDC, IAM in cloud).
+
+**Example:**
+
+Only CI/CD service account can deploy to `prod` namespace.
+
+### 2. Secure workloads (pods & containers)
+
+- Run containers as **non-root**.
+- Use **Pod Security Standards** (restricted/baseline).
+- Scan images for vulnerabilities before deployment.
+- Use **read-only root filesystem** where possible.
+
+### 3. Network security
+
+- Apply **NetworkPolicies** to control pod-to-pod traffic.
+- Expose services using **Ingress** instead of public NodePorts.
+- Use **TLS** for service-to-service communication.
+
+### 4. Protect secrets & data
+
+- Store sensitive data in **Secrets**, not ConfigMaps.
+- Enable **encryption at rest** for etcd.
+- Restrict access to secrets via RBAC.
+
+### 5. Secure the control plane
+
+- Restrict access to **etcd** (no public access).
+- Enable **audit logging** on kube-apiserver.
+- Keep Kubernetes and components **up to date**.
+
+### 6. Node & runtime security
+
+- Harden nodes (OS patches, minimal packages).
+- Use **container runtime security tools** (Falco, AppArmor, SELinux).
+- Disable SSH access where possible.
+
+### 7. Monitoring & auditing
+
+- Enable **audit logs**.
+- Monitor cluster activity and alerts.
+- Detect unusual behavior early.
+
+---
+
+## 36. What is RBAC in Kubernetes?
+
+**RBAC (Role-Based Access Control)** in Kubernetes is a **security mechanism** that controls **who can do what on which resources** in a cluster. It enforces the **principle of least privilege**.
+
+**Why RBAC is used:**
+
+- Prevents unauthorized access to cluster resources
+- Limits user and service permissions
+- Improves cluster security and auditability
+
+**How RBAC works:**
+
+RBAC is based on **four main objects**:
+
+1. **Role**
+    - Defines permissions **within a namespace**
+    - Example: allow `get`, `list`, `create` pods
+2. **ClusterRole**
+    - Defines permissions **cluster-wide**
+    - Used for nodes, namespaces, or global access
+3. **RoleBinding**
+    - Assigns a **Role** to a user, group, or service account
+4. **ClusterRoleBinding**
+    - Assigns a **ClusterRole** cluster-wide
+
+**Example scenario:**
+
+- Developer can **view pods** but cannot delete them.
+- CI/CD service account can **deploy applications** only in `prod` namespace.
+
+---
+
+## 37. What is a ServiceAccount?
+
+A **ServiceAccount** in Kubernetes is an **identity used by applications (pods) to authenticate with the Kubernetes API**. It allows pods to securely access cluster resources without using a human user's credentials.
+
+**Why ServiceAccount is used:**
+
+- Pods often need to **interact with the Kubernetes API** (e.g., CI/CD tools, controllers).
+- ServiceAccounts provide **machine-level authentication**.
+- Works together with **RBAC** to control permissions.
+
+**How it works:**
+
+1. A ServiceAccount is created in a **namespace**.
+2. Kubernetes automatically creates a **token (JWT)** for it.
+3. When a pod uses that ServiceAccount, the token is **mounted inside the pod**.
+4. The pod uses this token to authenticate to the API server.
+
+**Example scenario:**
+
+- A Jenkins pod needs to deploy applications to Kubernetes.
+- Jenkins uses a ServiceAccount with permissions to create Deployments and Services.
+
+---
+
+## 38. What is Pod Security (PSP / PSA)?
+
+**Pod Security** in Kubernetes refers to mechanisms that **control what a pod is allowed to do**, mainly from a **security and privilege perspective**. Kubernetes has evolved from **PSP (PodSecurityPolicy)** to **PSA (Pod Security Admission)**.
+
+### 1. PodSecurityPolicy (PSP) – Deprecated
+
+**What it was:**
+
+- A **cluster-level security policy** that defined **allowed pod behaviors**.
+- Enforced by the API server at pod creation time.
+
+**What it controlled:**
+
+- Running as **root or non-root**
+- Use of **privileged containers**
+- Access to **host network, PID, IPC**
+- Volume types allowed
+
+**Why it was removed:**
+
+- Complex to configure
+- Hard to manage with RBAC
+- Deprecated in **Kubernetes 1.21** and removed in **1.25**
+
+### 2. Pod Security Admission (PSA) – Current Standard
+
+**What it is:**
+
+- A **built-in admission controller** that enforces pod security using **predefined profiles**.
+- Easier and standardized replacement for PSP.
+
+**PSA security levels:**
+
+1. **Privileged**
+    - No restrictions
+    - For system-level workloads
+2. **Baseline**
+    - Prevents **known privilege escalations**
+    - Allows common app workloads
+3. **Restricted**
+    - Strongest security
+    - Enforces **non-root**, seccomp, minimal privileges
+
+**How PSA is applied:**
+
+- Applied using **namespace labels**.
+
+```
+pod-security.kubernetes.io/enforce: restricted
+pod-security.kubernetes.io/enforce-version: latest
+```
+
+**Example scenario:**
+
+- `dev` namespace → **baseline**
+- `prod` namespace → **restricted**
+- `kube-system` → **privileged**
+
+---
+
+## 39. What is a namespace-level security boundary?
+
+**A** namespace-level security boundary **in Kubernetes means using a** namespace to isolate resources, access, and policies **so that workloads in one namespace** cannot interfere with another.
+
+**How it works:**
+
+Security controls are **applied per namespace**, such as:
+
+- **RBAC Roles & RoleBindings**
+- **Pod Security Admission (PSA)**
+- **NetworkPolicies**
+- **ResourceQuota & LimitRange**
+
+These controls apply **only inside that namespace**.
+
+**Example scenario:**
+
+- `dev` namespace:
+    - Developers can deploy pods
+    - PSA = baseline
+- `prod` namespace:
+    - Limited access
+    - PSA = restricted
+    - NetworkPolicy blocks all except required traffic
+
+---
+
+## 40. How do you restrict container privileges?
+
+Restricting container privileges in Kubernetes is crucial to **minimize the risk of compromise**. You limit what a container can do at runtime so even if it's compromised, it **cannot harm the node or other pods**.
+
+### 1. Run as non-root
+
+- Ensure containers **do not run as root** unless necessary.
+- Use **Pod Security Admission (PSA)** or **SecurityContext**.
+
+```
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 3000
+  runAsNonRoot: true
+```
+
+### 2. Drop unnecessary capabilities
+
+- Linux capabilities allow containers to perform privileged operations.
+- Drop all capabilities and add only required ones.
+
+```
+securityContext:
+  capabilities:
+    drop: ["ALL"]
+    add: ["NET_BIND_SERVICE"]
+```
+
+### 3. Disable privileged mode
+
+- Avoid `privileged: true` unless absolutely required.
+- Privileged containers have **full host access**, which is risky.
+
+```
+securityContext:
+  privileged: false
+```
+
+### 4. Read-only root filesystem
+
+- Prevent modifications to the container filesystem.
+
+```
+securityContext:
+  readOnlyRootFilesystem: true
+```
+
+### 5. Use Pod Security Admission (PSA)
+
+- Apply **baseline** or **restricted** profiles to enforce:
+    - Non-root containers
+    - No privileged escalation
+    - Read-only root filesystem
+
+```
+pod-security.kubernetes.io/enforce: restricted
+```
+
+### 6. Limit host access
+
+- Avoid mounting **hostPath**, **hostNetwork**, or **hostPID** unless necessary.
+- Prevent containers from accessing sensitive host resources.
+
+---
+
+## 41. What is image scanning?
+
+**Image scanning** in Kubernetes and DevOps is the process of **analyzing container images for security vulnerabilities, misconfigurations, or compliance issues** before they are deployed.
+
+**Why it's important:**
+
+- Containers are often built from **public images**, which may contain **known vulnerabilities**.
+- Running unscanned images can lead to **security breaches, malware, or compliance failures**.
+- Helps enforce **DevSecOps practices** by catching issues early.
+
+**How it works:**
+
+1. The **container image** (Docker image, OCI image) is scanned.
+2. The scanner checks for:
+    - Known **CVEs (Common Vulnerabilities and Exposures)**
+    - Outdated packages
+    - Unsafe configurations (e.g., running as root)
+3. Reports are generated, sometimes **blocking deployment** if critical issues are found.
+
+**Tools for image scanning:**
+
+- **Trivy** → Simple, fast, open-source
+- **Clair** → Static analysis of container images
+- **Anchore** → Policy-based scanning
+- **Aqua Security, Prisma Cloud** → Enterprise solutions
+
+**Example workflow:**
+
+1. CI/CD pipeline builds Docker image.
+2. Image is scanned with Trivy:
+
+```
+trivy image my-app:latest
+```
+
+1. Vulnerabilities are reported.
+2. If critical, the pipeline **fails**, preventing deployment to Kubernetes.
+
+---
+
+🔹 **Scaling & Reliability**
+
+## 42. What is Cluster Autoscaler?
+
+The **Cluster Autoscaler** in Kubernetes is a component that **automatically adjusts the size of a cluster** based on the **resource demands of pods**. It **adds nodes when resources are insufficient** and **removes underutilized nodes** to optimize cost and efficiency.
+
+**Why it is used:**
+
+- Ensure the cluster can **accommodate pending pods**.
+- **Reduce cost** by removing idle nodes.
+- Improves **scalability and reliability** of workloads.
+
+**How it works:**
+
+1. The autoscaler watches **unschedulable pods**.
+2. If pods cannot be scheduled due to insufficient CPU/memory:
+    - It requests the cloud provider to **add nodes**.
+3. It also monitors **underutilized nodes**:
+    - If a node is mostly empty and pods can move elsewhere, it **removes the node**.
+4. Works only with **cloud-managed clusters** (AWS, GCP, Azure) or environments supporting dynamic node provisioning.
+
+**Key features:**
+
+- **Scale up:** Automatically adds nodes when pods cannot be scheduled.
+- **Scale down:** Removes nodes when they are underutilized.
+- **Works with multiple node groups:** Can scale different types of nodes based on pod requirements.
+- **Supports taints and tolerations:** Ensures workloads are scheduled correctly.
+
+**Example scenario:**
+
+- Cluster has 3 nodes, all fully used.
+- CI/CD pipeline launches a heavy job, pods remain pending.
+- Cluster Autoscaler adds **one more node**.
+- Once the job finishes and the node is underutilized, it is **removed** to save cost.
+
+---
+
+## 43. How does Kubernetes handle self-healing?
+
+Kubernetes provides **self-healing** capabilities to ensure applications remain **available and resilient**, even when pods or nodes fail. This is one of its core features for **reliable container orchestration**.
+
+**How it works:**
+
+1. **Pod health monitoring**
+    - Kubernetes uses **readiness** and **liveness probes** to check if a pod is healthy.
+    - **Liveness probe failure** → pod is **killed and restarted** automatically.
+    - **Readiness probe failure** → pod is **temporarily removed** from Service endpoints until it becomes healthy.
+2. **Replica management**
+    - Deployments, StatefulSets, and ReplicaSets ensure the **desired number of replicas** are always running.
+    - If a pod crashes, Kubernetes automatically **creates a replacement pod**.
+3. **Node failure recovery**
+    - kubelet continuously reports node health to the **control plane**.
+    - If a node fails, pods running on it are marked unschedulable.
+    - Kubernetes **reschedules pods** onto healthy nodes in the cluster.
+4. **Crash looping detection**
+    - Kubernetes can **restart crashing pods repeatedly**.
+    - Uses **backoff policies** to prevent rapid restarts from overwhelming the cluster.
+
+**Example scenario:**
+
+- A backend pod crashes due to memory exhaustion.
+- **Deployment detects only 2 replicas running**, desired replicas = 3.
+- Kubernetes automatically **creates a new pod** to maintain availability.
+- Users experience **no downtime** as the Service routes traffic to healthy pods.
+
+---
+
+## 44. What happens when a pod crashes?
+
+When a **pod crashes** in Kubernetes, the system automatically tries to **recover it** based on the pod's **controller and restart policy**. Kubernetes is designed to **ensure application availability** even in the event of failures.
+
+**Step-by-step behavior:**
+
+1. **Crash detection**
+    - kubelet monitors pod containers.
+    - Liveness probes detect **unhealthy containers**.
+    - kubelet reports the pod as **failed** if it stops unexpectedly.
+2. **Restart policy**
+    - Each pod has a **restartPolicy** (`Always`, `OnFailure`, `Never`).
+    - Common default in Deployments: `Always`.
+    - Kubernetes restarts the container according to the policy.
+3. **Replica management**
+    - If the pod is part of a **Deployment, ReplicaSet, StatefulSet**, Kubernetes ensures the **desired number of replicas** is maintained.
+    - If a pod crashes, a **new pod is automatically scheduled** on a healthy node.
+4. **Service continuity**
+    - Pods failing readiness checks are removed from **Service endpoints**.
+    - Traffic is routed to **healthy pods**, so users usually do **not notice downtime**.
+
+---
+
+## 45. What happens when a node goes down?
+
+When a **node goes down** in Kubernetes, the system automatically detects the failure and **reschedules workloads** to maintain application availability. This is part of Kubernetes' **self-healing and high-availability mechanism**.
+
+**Step-by-step behavior:**
+
+1. **Node monitoring**
+    - kubelet on each node sends **heartbeats** to the **API server**.
+    - The control plane checks the node status periodically.
+    - If heartbeats stop, the node is marked **NotReady**.
+2. **Pod eviction**
+    - Pods running on the failed node are **unschedulable**.
+    - The **node controller** waits for a configurable period (default 5 minutes) before evicting pods.
+3. **Rescheduling pods**
+    - Controller managers (ReplicaSet, Deployment, StatefulSet) detect missing replicas.
+    - New pods are **scheduled on healthy nodes** automatically.
+    - This ensures the **desired replica count** is maintained.
+4. **Service continuity**
+    - Services stop routing traffic to pods on the downed node.
+    - Traffic is routed to **healthy pods** on other nodes.
+5. **Optional node recovery**
+    - When the node comes back online, pods may be **rescheduled back**, depending on the scheduler rules.
+
+**Example scenario:**
+
+- Node1 runs 3 pods of a backend Deployment (replicas: 6).
+- Node1 crashes. API server marks Node1 as NotReady.
+- Controller notices only 3 replicas are running on other nodes.
+- Kubernetes **creates 3 new pods** on healthy nodes.
+- Traffic continues via Service → no downtime for users.
+
+---
+
+🔹 **Monitoring & Troubleshooting**
+
+## 46. How do you troubleshoot a failing pod?
+
+Troubleshooting a **failing pod** in Kubernetes involves **checking the pod status, logs, events, and configuration** to identify the root cause. Here's a structured interview-level approach:
+
+### 1. Check pod status
+
+```
+kubectl get pods -n <namespace>
+kubectl describe pod <pod-name> -n <namespace>
+```
+
+- **Fields to check:**
+    - `STATUS` → `CrashLoopBackOff`, `Pending`, `Error`
+    - `Events` → shows reasons for failures (e.g., `ImagePullBackOff`, `FailedScheduling`)
+    - `ContainerStatuses` → last state, restart count, exit code
+
+**Example:**
+
+- `CrashLoopBackOff` → container is repeatedly crashing
+- `ImagePullBackOff` → Kubernetes cannot pull the image
+
+### 2. Check pod logs
+
+```
+kubectl logs <pod-name> -n <namespace>
+kubectl logs <pod-name> -c <container-name> -n <namespace>
+```
+
+- **Look for errors** in application startup or runtime
+- If logs are empty, it may be a **startup crash**, missing configuration, or failing liveness probe
+
+### 3. Check container exit code
+
+- `kubectl describe pod` shows **container exit codes**
+- Common codes:
+    - `0` → normal exit
+    - `1` → application error
+    - `137` → out-of-memory (OOMKilled)
+
+### 4. Check events and scheduling issues
+
+```
+kubectl get events -n <namespace> --sort-by='.metadata.creationTimestamp'
+```
+
+- Look for:
+    - `FailedScheduling` → no nodes have enough resources
+    - `ErrImagePull` → image not found or authentication issue
+    - `BackOff` → pod keeps failing
+
+### 5. Verify configuration
+
+- **Check ConfigMaps and Secrets** mounted in the pod
+- Ensure **environment variables** are correct
+- Validate **resource requests/limits** (CPU/Memory)
+
+### 6. Advanced debugging
+
+- **Execute into a pod** for live troubleshooting:
+
+```
+kubectl exec -it <pod-name> -- /bin/sh
+```
+
+- **Run a debug pod** on the same node with hostPath or network access
+
+### 7. Health probes
+
+- Check **liveness/readiness probes**:
+    - Misconfigured probes can cause **CrashLoopBackOff**
+- Adjust **timeout, period, and initialDelay** if needed
+
+---
+
+## 47. How do you check pod logs?
+
+In Kubernetes, checking pod logs is **one of the first steps** to troubleshoot applications. Logs show **what the container is doing or why it's failing**.
+
+### 1. Check logs of a single container pod
+
+```
+kubectl logs <pod-name> -n <namespace>
+```
+
+- **`-n <namespace>`** is optional if in the default namespace.
+- Shows **stdout/stderr** of the container.
+
+### 2. Check logs of a specific container in a pod
+
+```
+kubectl logs <pod-name> -c <container-name> -n <namespace>
+```
+
+- Useful when a pod has **multiple containers**, e.g., **sidecars**.
+
+### 3. Check logs of previous container instance
+
+```
+kubectl logs -p <pod-name> -n <namespace>
+```
+
+- Shows logs from the **last terminated container**
+- Helps debug **CrashLoopBackOff** or container crashes.
+
+### 4. Stream live logs (like `tail -f`)
+
+```
+kubectl logs -f <pod-name> -n <namespace>
+kubectl logs -f <pod-name> -c <container-name> -n <namespace>
+```
+
+- Useful to **watch logs in real-time** during debugging or deployment.
+
+### 5. View logs across all pods in a Deployment
+
+```
+kubectl logs -l app=<label> -n <namespace>
+```
+
+- Combines logs of multiple pods with the same label
+- Helpful for **replicated workloads**.
+
+**Best practices:**
+
+- Use **namespace and container name** to avoid ambiguity
+- For persistent logging in production, integrate with **EFK stack (Elasticsearch, Fluentd, Kibana)** or **Prometheus + Grafana**
+- Avoid relying solely on `kubectl logs` for long-term storage
+
+---
+
+## 48. What is `kubectl describe` used for?
+
+`kubectl describe` is a **diagnostic command** in Kubernetes that gives **detailed information about a resource**, including its **status, configuration, events, and recent errors**. It's often used in **troubleshooting pods, nodes, deployments, and services**.
+
+**Purpose of `kubectl describe`:**
+
+- Inspect the **current state** of a resource.
+- View **events** generated by the Kubernetes control plane.
+- Understand **why a resource is failing or pending**.
+
+---
+
+## 49. How do you debug CrashLoopBackOff?
+
+A **CrashLoopBackOff** happens when a container in a pod **keeps crashing repeatedly**, and Kubernetes backs off restarting it. Debugging it requires a **structured approach** to find the root cause.
+
+### 1. Check pod status
+
+```
+kubectl get pods -n <namespace>
+kubectl describe pod <pod-name> -n <namespace>
+```
+
+- Look for:
+    - `State: Waiting` and `Reason: CrashLoopBackOff`
+    - `Last State` → exit code and message
+    - Events → image pull errors, scheduling issues
+
+**Tip:** The exit code gives clues:
+
+- `0` → normal exit
+- `1` → app error
+- `137` → OOMKilled (out-of-memory)
+- `139` → segmentation fault
+
+### 2. Check logs
+
+```
+kubectl logs <pod-name> -n <namespace>
+kubectl logs -p <pod-name> -n <namespace>
+```
+
+- `-p` shows logs from the **previous container instance**
+- Look for:
+    - Application crashes
+    - Missing environment variables
+    - Configuration errors
+
+### 3. Check probes
+
+- **Liveness/Readiness probes** misconfiguration can cause CrashLoopBackOff.
+
+```
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+```
+
+- Increase `initialDelaySeconds` if the app takes time to start.
+
+### 4. Check resources
+
+- Pod may crash due to **CPU/memory limits**:
+
+```
+kubectl describe pod <pod-name>
+```
+
+- Look for `OOMKilled` or `CPU throttling`.
+- Adjust **requests and limits** in the pod spec.
+
+### 5. Run a debug pod
+
+- Launch an interactive pod on the same node or with the same image:
+
+```
+kubectl run -it --rm debug --image=my-app:latest -- /bin/sh
+```
+
+- Test commands and check for missing files, configs, or permissions.
+
+### 6. Common causes
+
+1. Application crashes due to code bug
+2. Missing or misconfigured environment variables
+3. Container runs as root, violates PSA/PSP policies
+4. Misconfigured probes
+5. Insufficient CPU/memory
+6. Image pull errors
+
+---
+
+## 50. What are liveness and readiness probes?
+
+**Liveness and readiness probes** in Kubernetes are **health checks for containers** that help ensure pods are running properly and serving traffic. They are **key to Kubernetes self-healing and load balancing**.
+
+### 1. Liveness Probe
+
+- **Purpose:** Detects if a container is **alive or stuck**.
+- **Action:** If the probe fails, Kubernetes **restarts the container**.
+- **Use case:** Fix containers that hang, deadlock, or crash silently.
+
+**Example:**
+
+```
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+```
+
+- Checks `/healthz` endpoint every 10 seconds after an initial delay of 5 seconds.
+- If failing repeatedly, kubelet restarts the container.
+
+### 2. Readiness Probe
+
+- **Purpose:** Detects if a container is **ready to serve traffic**.
+- **Action:** If the probe fails, Kubernetes **removes the pod from Service endpoints**.
+- **Use case:** Prevent traffic being sent to a container that is **starting up or temporarily unhealthy**.
+
+**Example:**
+
+```
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+```
+
+- Pod is **excluded from the load balancer** if `/ready` fails.
+
+---
+
+## 51. How do you monitor Kubernetes?
+
+Monitoring Kubernetes is crucial for **observability, reliability, and troubleshooting** in production clusters. It involves tracking **cluster health, node/pod metrics, resource usage, and events**.
+
+### 1. Metrics Monitoring
+
+- **Tools:** Prometheus + Grafana (most common)
+- **What to monitor:**
+    - CPU, memory, disk usage of nodes and pods
+    - Pod counts and replica status
+    - Node availability and health
+- Prometheus scrapes metrics from:
+    - **kubelet** → node/pod metrics
+    - **cAdvisor** → container-level metrics
+    - **API server, scheduler, controller-manager** → control plane metrics
+
+**Example:** Grafana dashboards visualize cluster utilization and alerts.
+
+### 2. Log Monitoring
+
+- **Tools:** EFK stack (Elasticsearch, Fluentd, Kibana) or Loki
+- **What to monitor:**
+    - Application logs from pods
+    - Kubernetes system logs (`kube-apiserver`, `kubelet`, etc.)
+    - Audit logs for security
+
+**Benefit:** Quickly debug pod failures, deployments, and network issues.
+
+### 3. Events Monitoring
+
+- Kubernetes emits **events** for resource changes:
+
+```
+kubectl get events -n <namespace> --sort-by='.metadata.creationTimestamp'
+```
+
+- Example events: `PodFailed`, `FailedScheduling`, `BackOff`
+- Useful for **real-time alerting** in CI/CD or operations.
+
+### 4. Health Probes
+
+- **Liveness and readiness probes** are a form of **automatic monitoring**
+- Alerts operators if containers are unhealthy or not ready.
+
+### 5. Cluster Monitoring Services
+
+- Cloud providers offer managed monitoring:
+    - **GKE:** Stackdriver / Cloud Monitoring
+    - **EKS:** CloudWatch Container Insights
+    - **AKS:** Azure Monitor
+- These integrate metrics, logs, and events in one console.
+
+### 6. Alerting
+
+- Set up **alerts for CPU/memory thresholds, pod failures, or node down events**.
+- Tools like **Prometheus Alertmanager** can notify via Slack, email, or PagerDuty.
+
+---
+
+## 52. What metrics does Kubernetes expose?
+
+Kubernetes exposes a wide range of metrics about nodes, pods, containers, and the control plane. These metrics are essential for monitoring, scaling, and troubleshooting. Most of these are collected via kubelet, cAdvisor, and the API server, often scraped by Prometheus.
+
+### 1. Node Metrics
+
+- CPU usage → current, request, and limit utilization
+- Memory usage → total, used, available
+- Disk usage → ephemeral storage used
+- Network usage → packets sent/received
+
+**Example:**
+
+- `node_cpu_seconds_total` → CPU usage per core
+- `node_memory_MemAvailable_bytes` → available memory
+
+### 2. Pod & Container Metrics
+
+- CPU and memory usage for each pod/container
+- Restart count → container crash frequency
+- Filesystem usage → disk consumed by containers
+- Network usage → bytes in/out per container
+
+**Example:**
+
+- `container_cpu_usage_seconds_total` → cumulative CPU time
+- `container_memory_working_set_bytes` → memory used by a container
+
+### 3. Deployment & ReplicaSet Metrics
+
+- Replicas desired vs. actual → helps detect missing pods
+- Available replicas → shows healthy pods
+- Unavailable replicas → indicates pending or crashing pods
+
+**Example:**
+
+- `kube_deployment_status_replicas_available`
+- `kube_replicaset_status_ready_replicas`
+
+### 4. Control Plane Metrics
+
+- API server metrics:
+    - Request rates (`apiserver_request_total`)
+    - Latency (`apiserver_request_duration_seconds`)
+    - Error counts (`apiserver_request_total{code="500"}`)
+- Scheduler metrics → scheduling latency, queue length
+- Controller manager metrics → reconciliation loops, errors
+
+### 5. Cluster Autoscaler Metrics
+
+- Number of nodes added/removed
+- Pending pods that triggered scaling
+- Node utilization statistics
+
+### 6. Custom Application Metrics
+
+- Kubernetes supports custom metrics for Horizontal Pod Autoscaler (HPA) using:
+    - Prometheus Adapter
+    - Custom metrics API
+- Example: scale a pod based on queue length in RabbitMQ or request rate per second.
+
+---
+
+🔹 **CI/CD & DevOps Integration**
+
+## 53. How do you use Jenkins with Kubernetes?
+
+**Using** Jenkins with Kubernetes **is a common DevOps pattern to** dynamically provision build agents (pods)**, scale pipelines, and deploy applications. Kubernetes acts as the** executor environment for Jenkins jobs.
+
+### 1. Jenkins-Kubernetes integration
+
+- **Jenkins master** runs the UI, scheduling, and orchestration.
+- **Jenkins agents (slaves)** run inside Kubernetes pods.
+- The **Kubernetes plugin** allows Jenkins to:
+    - Launch pods dynamically per job
+    - Reuse pods for different builds
+    - Automatically clean up after builds
+
+### 2. Jenkins Kubernetes Plugin
+
+- Install via Jenkins → Manage Jenkins → Manage Plugins → **Kubernetes**.
+- Configuration:
+    - **Kubernetes cluster URL** (in-cluster or external)
+    - **Credentials** (ServiceAccount token)
+    - **Pod template** defining container images and volumes for agents
+
+### 3. Dynamic agent pods
+
+**Example Pod Template:**
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins-agent: "true"
+spec:
+  containers:
+  - name: jnlp
+    image: jenkins/inbound-agent:latest
+    args: ["$(JENKINS_SECRET)", "$(JENKINS_NAME)"]
+  - name: maven
+    image: maven:3.8.5-jdk11
+    command: ["cat"]
+    tty: true
+```
+
+- `jnlp` container → connects back to Jenkins master
+- Additional containers → build tools like Maven, Node, Docker
+
+### 4. Using a Jenkins Pipeline with Kubernetes agents
+
+```groovy
+pipeline {
+    agent {
+        kubernetes {
+            label 'k8s-agent'
+            yaml """
+            apiVersion: v1
+            kind: Pod
+            spec:
+              containers:
+              - name: maven
+                image: maven:3.8.5-jdk11
+                command:
+                - cat
+                tty: true
+            """
+        }
+    }
+    stages {
+        stage('Build') {
+            steps {
+                container('maven') {
+                    sh 'mvn clean package'
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'kubectl apply -f k8s/deployment.yaml'
+            }
+        }
+    }
+}
+```
+
+- `agent kubernetes {}` → dynamically provisions a pod per build
+- `container('maven') {}` → runs steps inside the specified container
+
+### 5. Benefits of Jenkins + Kubernetes
+
+1. **Dynamic scaling:** No permanent agents needed
+2. **Isolation:** Each job runs in a clean pod
+3. **Consistency:** Use the same container image across builds
+4. **Resource efficiency:** Pods are destroyed after jobs complete
+5. **Integration with CI/CD:** Build, test, and deploy to Kubernetes clusters
+
+---
+
+## 54. What is Helm?
+
+**Helm** is a **package manager for Kubernetes**, similar to `apt` or `yum` for Linux, that simplifies **deploying, managing, and versioning applications** on a Kubernetes cluster.
+
+**Why Helm is used:**
+
+- Kubernetes manifests (YAML) can get **complex** for multi-component applications.
+- Helm **packages resources into charts**, making deployment **repeatable, consistent, and manageable**.
+- Supports **versioning, templating, and easy upgrades/rollbacks**.
+
+**Key concepts:**
+
+1. **Chart**
+    - A **Helm package** containing:
+        - Kubernetes manifests (`Deployment`, `Service`, etc.)
+        - Default configuration values
+        - Optional templates for dynamic values
+    - Example: `nginx` chart deploys an Nginx deployment + service.
+2. **Release**
+    - An **instance of a chart deployed to the cluster**
+    - Can have its own configuration values and can be **upgraded or rolled back**.
+3. **Values**
+    - Default variables for a chart
+    - Can be overridden at install/upgrade time using a **`values.yaml`** file.
+
+**Basic Helm commands:**
+
+```bash
+# Add a chart repository
+helm repo add stable https://charts.helm.sh/stable
+
+# Update repo index
+helm repo update
+
+# Install a chart
+helm install my-release stable/nginx
+
+# Upgrade a release
+helm upgrade my-release stable/nginx --values custom-values.yaml
+
+# Rollback a release
+helm rollback my-release 1
+
+# List releases
+helm list
+
+# Uninstall a release
+helm uninstall my-release
+```
+
+**Example scenario:**
+
+- Deploy a microservices app:
+    - Each service (frontend, backend, database) packaged as a Helm chart
+    - Use `values.yaml` to configure environment-specific variables
+    - Deploy to dev/staging/prod with one command per environment
+    - Upgrade or rollback easily without manually editing YAML
+
+---
+
+## 55. Why use Helm over kubectl?
+
+Using **Helm over plain `kubectl`** offers several advantages for **deploying and managing applications** on Kubernetes, especially as complexity grows. Here's a detailed explanation:
+
+### 1. Templating and Parameterization
+
+- **Helm charts** allow dynamic templates in manifests (`Deployment`, `Service`, etc.).
+- Use **`values.yaml`** or CLI overrides to customize deployments per environment (dev, staging, prod).
+
+**Example:**
+
+```yaml
+replicas:  .Values.replicas 
+image:  .Values.image.repository : .Values.image.tag 
+```
+
+- With `kubectl`, you'd need separate YAML files or manual edits for each environment.
+
+### 2. Versioning
+
+- Helm **tracks releases** with versions.
+- Enables **rollback** to a previous version if an upgrade fails:
+
+```bash
+helm rollback my-app 2
+```
+
+- With `kubectl`, rollbacks require manual deletion and re-apply of old manifests, which is error-prone.
+
+### 3. Dependency Management
+
+- Helm charts can **depend on other charts** (e.g., a web app depends on a database).
+- Helm automatically installs/upgrades dependencies.
+- With `kubectl`, you'd manually manage each component.
+
+### 4. Reproducibility
+
+- Helm charts package **all resources needed** for an app (Deployment, Service, ConfigMaps, Secrets).
+- This ensures **consistent deployments** across clusters and teams.
+
+### 5. Easier Upgrades
+
+- Helm **computes differences** between chart versions and applies only necessary changes.
+- `kubectl apply` can be used with YAML, but managing multi-component apps becomes cumbersome.
+
+### 6. Release Management
+
+- Helm keeps a **history of all releases**, including failed deployments.
+- Provides **auditability and traceability**.
+
+### 7. Community Charts
+
+- There's a rich ecosystem of **prebuilt charts** (nginx, MySQL, Prometheus).
+- Saves time compared to writing raw YAML manifests.
+
+---
+
+## 56. What is a Helm chart?
+
+A **Helm chart** is a **package of pre-configured Kubernetes resources** that defines an application, including its deployments, services, configuration, and dependencies. Think of it as a **"containerized app recipe"** for Kubernetes.
+
+**Key points about Helm charts:**
+
+1. **Chart = Package**
+    - Similar to a `.deb` or `.rpm` package in Linux.
+    - Contains **all the Kubernetes manifests** required to run an app.
+2. **Templated Manifests**
+    - Charts use **Go templates** to make manifests configurable.
+    - Values can be set using `values.yaml` or overridden at install/upgrade time.
+3. **Reusable**
+    - Same chart can be deployed multiple times with **different configurations** (dev, staging, prod).
+4. **Versioned**
+    - Charts have **version numbers**, enabling upgrades and rollbacks.
+
+---
+
+## 57. What is GitOps?
+
+**GitOps** is a modern DevOps practice where **Git is the single source of truth for declarative infrastructure and application deployment**. Changes to the system are **driven automatically by updates to Git repositories**.
+
+**Key Concepts:**
+
+1. **Declarative Infrastructure**
+    - Kubernetes manifests, Helm charts, or Terraform code describe the **desired state** of the system.
+    - The Git repository stores this **declarative configuration**.
+2. **Automatic Reconciliation**
+    - A GitOps operator (like **Argo CD** or **Flux**) continuously monitors the Git repo and the live cluster.
+    - If the cluster drifts from the Git-defined state, the operator **automatically applies changes** to match Git.
+3. **Pull-based Deployment**
+    - GitOps uses a **pull model**, where the cluster pulls changes from Git rather than CI/CD pushing changes.
+    - Improves **security** because the cluster controls what is applied.
+
+**Benefits of GitOps:**
+
+| **Benefit** | **Description** |
+| --- | --- |
+| Version control | Every change is in Git, with history and rollback capabilities |
+| Auditability | You can see who changed what and when |
+| Consistency | Cluster state always matches Git |
+| Self-healing | Operators detect drift and restore the desired state |
+| Improved CI/CD | Git triggers deployments automatically via reconciliation |
+
+**How GitOps works (example flow):**
+
+1. Developer pushes a commit with updated manifests or Helm values to Git.
+2. GitOps operator detects the change.
+3. Operator applies the manifests to the Kubernetes cluster.
+4. Cluster state converges with the Git-defined desired state.
+5. Rollbacks can be done by reverting the commit in Git.
+
+---
+
+## 58. How does ArgoCD work?
+
+**Argo CD** is a **GitOps continuous delivery tool for Kubernetes**. It continuously monitors a Git repository for declarative Kubernetes manifests or Helm charts and ensures the **cluster state matches what's defined in Git**.
+
+**Workflow Example:**
+
+1. Developer pushes updated Helm values or manifests to Git.
+2. Argo CD detects the commit in the repository.
+3. Application controller calculates the **difference** between live cluster and Git.
+4. If automatic sync is enabled, it applies changes to the cluster; otherwise, it waits for manual approval.
+5. Cluster state now matches Git. Any drift in the future is automatically corrected.
+
+---
+
+## 59. Difference between Jenkins and ArgoCD?
+
+### 1. Purpose
+
+| **Feature** | **Jenkins** | **Argo CD** |
+| --- | --- | --- |
+| Primary function | CI/CD automation server | GitOps continuous delivery for Kubernetes |
+| Focus | Build, test, package, deploy | Continuous deployment and cluster reconciliation |
+| Workflow style | Push-based (Jenkins pushes changes) | Pull-based (cluster pulls desired state from Git) |
+
+### 2. Approach
+
+**Jenkins:**
+
+- Declarative or scripted pipelines
+- Can build, test, and deploy applications to any environment
+- Triggers via commits, webhooks, or schedules
+- Imperative style: Jenkins executes commands in sequence
+
+**Argo CD:**
+
+- Declarative GitOps approach
+- Only deploys applications to Kubernetes
+- Continuously monitors Git for the desired state and reconciles the cluster
+- Pull-based: cluster automatically updates itself from Git
