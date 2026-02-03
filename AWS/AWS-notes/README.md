@@ -157,7 +157,7 @@
 ![Architecture Diagram](assets/157-Photoroom.png)
 ![Architecture Diagram](assets/158-Photoroom.png)
 ![Architecture Diagram](assets/159-Photoroom.png)
-![Architecture Diagram](assets/160-Photoroom.png)
+![Architecture Diagram](assets/160.png)
 ![Architecture Diagram](assets/161-Photoroom.png)
 ![Architecture Diagram](assets/162-Photoroom.png)
 ![Architecture Diagram](assets/163-Photoroom.png)
