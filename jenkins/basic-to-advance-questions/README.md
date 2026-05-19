@@ -183,7 +183,7 @@ A simple pipeline might have:
 
 **🔹 Declarative Pipeline (Easy & Structured)**
 
-- Think of this like following a fixed template.
+**Think of this like following a fixed template.**
 
 - You write code in a predefined structure
 - Easier to read and understand
@@ -206,7 +206,7 @@ pipeline {
 ```
 **🔹 Scripted Pipeline (Flexible & Powerful)**
 
-- Think of this like writing your own custom program.
+**Think of this like writing your own custom program.**
 
 - No strict structure
 - Full control using Groovy scripting
