@@ -181,40 +181,25 @@ A simple pipeline might have:
 
 ### 9. Difference between **Declarative** and **Scripted Pipeline**
 
-Both are ways to define **Jenkins Pipelines**, but they differ in **syntax, structure, and use cases**.
+🔹 Declarative Pipeline (Easy & Structured)
 
-**1. Declarative Pipeline:**
+Think of this like following a fixed template.
 
-- **Structured and simpler**; uses a predefined `pipeline {}` syntax.
-- Designed for **readability and ease of use**, ideal for teams starting with Jenkins.
-- Supports **built-in error handling, stages, and post actions** easily.
-
-**Example snippet:**
-
-```groovy
+You write code in a predefined structure
+Easier to read and understand
+Less chance of mistakes
+Best for beginners
+Example:
 pipeline {
     agent any
     stages {
-        stage('Build') { steps { sh 'make' } }
-        stage('Test') { steps { sh 'make test' } }
+        stage('Build') {
+            steps {
+                echo 'Building...'
+            }
+        }
     }
 }
-```
-
-**2. Scripted Pipeline:**
-
-- **More flexible and programmatic**, written in Groovy code.
-- Suitable for **complex workflows**, loops, and conditional logic not easily handled in declarative syntax.
-- Requires more **expertise** to maintain and debug.
-
-**Example snippet:**
-
-```groovy
-node {
-    stage('Build') { sh 'make' }
-    stage('Test') { sh 'make test' }
-}
-```
 
 ---
 
