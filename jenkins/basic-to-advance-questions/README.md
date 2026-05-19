@@ -181,15 +181,18 @@ A simple pipeline might have:
 
 ### 9. Difference between **Declarative** and **Scripted Pipeline**
 
-🔹 Declarative Pipeline (Easy & Structured)
+**🔹 Declarative Pipeline (Easy & Structured)**
 
-Think of this like following a fixed template.
+- Think of this like following a fixed template.
 
-You write code in a predefined structure
-Easier to read and understand
-Less chance of mistakes
-Best for beginners
-Example:
+- You write code in a predefined structure
+- Easier to read and understand
+- Less chance of mistakes
+- Best for beginners
+
+**Example:**
+
+```groovy
 pipeline {
     agent any
     stages {
@@ -200,6 +203,25 @@ pipeline {
         }
     }
 }
+```
+**🔹 Scripted Pipeline (Flexible & Powerful)**
+
+- Think of this like writing your own custom program.
+
+- No strict structure
+- Full control using Groovy scripting
+- More flexible but more complex
+- Best for advanced users
+
+**Example:**
+
+```groovy
+node {
+    stage('Build') {
+        echo 'Building...'
+    }
+}
+```
 
 ---
 
