@@ -1056,7 +1056,7 @@ spec:
 
 Build History → Console Output
 
-### Stage timing breakdown
+**2. Stage timing breakdown**
 **Check Jenkins Queue & Executors**
 
 - If jobs are waiting:
@@ -1215,15 +1215,15 @@ parallel {
 }
 ```
 ### Avoid unnecessary steps
-- Cache dependencies (Maven, npm, etc.)
-- Quick Debug Checklist ✔
-- ☐ Queue delay?
-- ☐ Slow stage?
-- ☐ Agent overloaded?
-- ☐ Disk slow/full?
-- ☐ Plugins outdated?
-- ☐ Git checkout slow?
-- ☐ External service slow?
+Cache dependencies (Maven, npm, etc.)
+Quick Debug Checklist ✔
+☐ Queue delay?
+☐ Slow stage?
+☐ Agent overloaded?
+☐ Disk slow/full?
+☐ Plugins outdated?
+☐ Git checkout slow?
+☐ External service slow?
 
 ---
 
