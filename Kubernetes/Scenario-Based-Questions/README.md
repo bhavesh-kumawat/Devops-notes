@@ -9,6 +9,7 @@ Designing Kubernetes for production requires careful planning to ensure **high a
 - Amazon EKS
 - Google Kubernetes Engine
 - Azure Kubernetes Service
+  
 **If self-managed:**
 - Minimum 3 control plane nodes (HA setup)
 - Use etcd backup strategy (critical for recovery)
