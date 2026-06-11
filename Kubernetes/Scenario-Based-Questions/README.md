@@ -5,21 +5,16 @@
 Designing Kubernetes for production requires careful planning to ensure **high availability, scalability, security, and observability**. Here's a structured approach based on best practices:
 
 ### 1. Cluster Architecture
+**Use managed Kubernetes if possible:**
+- Amazon EKS
+- Google Kubernetes Engine
+- Azure Kubernetes Service
+**If self-managed:**
+- Minimum 3 control plane nodes (HA setup)
+- Use etcd backup strategy (critical for recovery)
+- Spread nodes across zones (multi-AZ)
 
-**Control Plane:**
-
-- Use **high availability (HA)**: at least 3 master nodes.
-- Deploy across **multiple availability zones** to survive failures.
-- Components:
-    - **kube-apiserver** → exposed via load balancer
-    - **etcd** → distributed key-value store, backed up regularly
-    - **kube-scheduler, controller-manager** → HA configuration
-
-**Worker Nodes:**
-
-- Separate compute nodes for workloads.
-- Use **node pools** for different workloads (e.g., GPU nodes, general compute).
-- **Label nodes** for workload-specific scheduling.
+👉 Goal: No single point of failure
 
 ### 2. Networking
 
