@@ -12,7 +12,7 @@
 
 ---
 
-### 2. Difference between Security Groups and NACLs?
+### 2. Difference between Security Groups and NACLs (Network Access Control List)?
 
 | **Feature** | **Security Groups** | **Network ACLs (NACLs)** |
 | --- | --- | --- |
