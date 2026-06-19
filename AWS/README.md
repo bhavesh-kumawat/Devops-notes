@@ -406,6 +406,10 @@ Data in transit is data moving across networks (internet, VPC, or internal servi
 
 #### 🔹 What is CloudWatch Logs Insights?
 
+- CloudWatch Logs Insights is a query language and analytics tool in Amazon CloudWatch that lets you search, filter, and analyze log data stored in Amazon CloudWatch log groups.
+
+                              **or**
+
 **CloudWatch Logs Insights** is a fully managed, interactive log analytics service that allows you to:
 
 - Query, analyze, and visualize log data stored in CloudWatch Logs
