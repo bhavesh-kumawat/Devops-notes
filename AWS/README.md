@@ -558,8 +558,6 @@ AWS provides multiple ways to manage secrets securely:
 
 ### 15. How do you implement CI/CD for a multi-region deployment?
 
-#### 🔹 Goal
-
 Implementing CI/CD for a multi-region deployment means your application is automatically built, tested, and deployed to multiple geographic regions (like India, US, Europe) in a safe and consistent way.
 
 #### 🔹1. Use a CI/CD Tool
@@ -583,6 +581,7 @@ Region 1 (Primary) → Region 2 → Region 3
 - Deploy to one region first
 - Test/monitor
 - Then move to next
+
 **Option B: Parallel Deployment**
 - Deploy to all regions at the same time
 - Faster
@@ -619,6 +618,7 @@ Region 1 (Primary) → Region 2 → Region 3
 - Old version (Blue)
 - New version (Green)
 - Switch traffic when ready
+
 **Canary Deployment**
 - Deploy to small % of users first
 - Gradually increase traffic
