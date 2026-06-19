@@ -185,70 +185,70 @@ Auto Scaling will automatically launch new instances when CPU rises above 50% an
 
 ### 8. What is AWS CodePipeline / CodeBuild / CodeDeploy?
 
-These three services—AWS CodePipeline, CodeBuild, and CodeDeploy—are part of Amazon Web Services (AWS) DevOps toolchain. They work together to automate your software delivery process (CI/CD pipeline).
+- These three services—AWS CodePipeline, CodeBuild, and CodeDeploy—are part of Amazon Web Services (AWS) DevOps toolchain. They work together to automate your software delivery process (CI/CD pipeline).
 
-🔄 1. AWS CodePipeline (The Orchestrator)
-CodePipeline is a CI/CD pipeline service that automates the entire flow:
+**🔄 1. AWS CodePipeline (The Orchestrator)**
+- CodePipeline is a CI/CD pipeline service that automates the entire flow:
 
-Source → Build → Test → Deploy
+- Source → Build → Test → Deploy
 
-Think of it like:
+- Think of it like:
 👉 A manager who tells each step when to run
 
-Key points:
+- Key points:
 
-Connects tools like GitHub, CodeBuild, CodeDeploy
-Automatically triggers when code changes
-Defines stages (Source, Build, Deploy, etc.)
+- Connects tools like GitHub, CodeBuild, CodeDeploy
+- Automatically triggers when code changes
+- Defines stages (Source, Build, Deploy, etc.)
 
-Example flow:
+- Example flow:
 
-Developer pushes code to GitHub
-CodePipeline detects change
-Triggers CodeBuild
-Then triggers CodeDeploy
+- Developer pushes code to GitHub
+- CodePipeline detects change
+- Triggers CodeBuild
+- Then triggers CodeDeploy
 
-🏗️ 2. AWS CodeBuild (The Builder)
-CodeBuild is a fully managed build service.
+**🏗️ 2. AWS CodeBuild (The Builder)**
+- CodeBuild is a fully managed build service.
 
-Think of it like:
+- Think of it like:
 👉 A worker who compiles and tests your code
 
-What it does:
+- What it does:
 
-Compiles source code
-Runs tests
-Creates build artifacts (like .jar, .zip, Docker image)
+- Compiles source code
+= Runs tests
+= Creates build artifacts (like .jar, .zip, Docker image)
 
-Key features:
+- Key features:
 
-No servers to manage
-Uses buildspec.yml file for instructions
-Supports multiple languages (Java, Node.js, Python, etc.)
+- No servers to manage
+- Uses buildspec.yml file for instructions
+- Supports multiple languages (Java, Node.js, Python, etc.)
 
-Example:
+- Example:
 
-Takes your Java code → compiles → runs tests → outputs .jar
+- Takes your Java code → compiles → runs tests → outputs .jar
 
-🚀 3. AWS CodeDeploy (The Deployer)
-CodeDeploy is a deployment service.
+**🚀 3. AWS CodeDeploy (The Deployer)**
+- CodeDeploy is a deployment service.
 
-Think of it like:
+- Think of it like:
 👉 A delivery person who installs your app on servers
 
-What it does:
+- What it does:
 
-Deploys applications to:
-EC2 instances
-Lambda
-On-prem servers
-Supports deployment strategies:
-Rolling deployment
-Blue/Green deployment
+- Deploys applications to:
+- EC2 instances
+- Lambda
+- On-prem servers
+- Supports deployment strategies:
+- Rolling deployment
+- Blue/Green deployment
 
-Example:
+- Example:
 
-Takes .jar from CodeBuild → deploys it to EC2 instances
+- Takes .jar from CodeBuild → deploys it to EC2 instances
 
 | **Service** | **Purpose** | **Key Features** |
 | --- | --- | --- |
