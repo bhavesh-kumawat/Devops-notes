@@ -192,16 +192,16 @@ Auto Scaling will automatically launch new instances when CPU rises above 50% an
 
 - Source → Build → Test → Deploy
 
-- Think of it like:
+**Think of it like:**
 👉 A manager who tells each step when to run
 
-- Key points:
+**Key points:**
 
 - Connects tools like GitHub, CodeBuild, CodeDeploy
 - Automatically triggers when code changes
 - Defines stages (Source, Build, Deploy, etc.)
 
-- Example flow:
+**Example flow:**
 
 - Developer pushes code to GitHub
 - CodePipeline detects change
@@ -211,32 +211,32 @@ Auto Scaling will automatically launch new instances when CPU rises above 50% an
 **🏗️ 2. AWS CodeBuild (The Builder)**
 - CodeBuild is a fully managed build service.
 
-- Think of it like:
+**Think of it like:**
 👉 A worker who compiles and tests your code
 
-- What it does:
+**What it does:**
 
 - Compiles source code
 = Runs tests
 = Creates build artifacts (like .jar, .zip, Docker image)
 
-- Key features:
+**Key features:**
 
 - No servers to manage
 - Uses buildspec.yml file for instructions
 - Supports multiple languages (Java, Node.js, Python, etc.)
 
-- Example:
+**Example:**
 
 - Takes your Java code → compiles → runs tests → outputs .jar
 
 **🚀 3. AWS CodeDeploy (The Deployer)**
 - CodeDeploy is a deployment service.
 
-- Think of it like:
+**Think of it like:**
 👉 A delivery person who installs your app on servers
 
-- What it does:
+ **What it does:**
 
 - Deploys applications to:
 - EC2 instances
@@ -246,7 +246,7 @@ Auto Scaling will automatically launch new instances when CPU rises above 50% an
 - Rolling deployment
 - Blue/Green deployment
 
-- Example:
+**Example:**
 
 - Takes .jar from CodeBuild → deploys it to EC2 instances
 
