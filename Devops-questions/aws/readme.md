@@ -6,7 +6,7 @@ Simple, plain-English answers you can actually say out loud in an interview. Eac
 
 ## EC2 (Elastic Compute Cloud)
 
-**What is EC2?**
+## What is EC2?
 EC2 is a virtual server in the cloud. Instead of buying a physical computer, you rent a server from AWS and use it to run your applications.
 
 **1. Purchasing options — On-Demand, Reserved, Spot, Savings Plans, Dedicated Hosts?**
@@ -468,8 +468,3 @@ User's browser → Route 53 (DNS lookup) → ALB (public subnet) → target grou
 
 **10. Enforcing security/compliance across many accounts.**
 Use AWS Organizations with Service Control Policies (SCPs) to set hard guardrails, AWS Config to continuously check resource compliance, GuardDuty for threat detection, and a Landing Zone/Control Tower setup to standardize how every new account is created and secured from day one.
-
----
-
-### How to use this doc
-Read each definition out loud in your own words first — interviewers notice when an answer sounds memorized versus understood. Then practice adding one real example from your own experience for at least 10-15 of these questions; that's usually what separates a pass from a "just okay" answer.
