@@ -15,40 +15,40 @@ EC2 is a virtual server in the cloud. Instead of buying a physical computer, you
 - Spot: use AWS's spare capacity at up to 90% discount, but AWS can take it back with short notice — good for batch jobs, CI runners, anything that can restart.
 - Dedicated Hosts: a physical server just for you — used when licensing or compliance requires it.
 
-**2. Spot vs On-Demand, and how do you handle interruptions?**
+## 2. Spot vs On-Demand, and how do you handle interruptions?
 Spot is cheap leftover capacity; On-Demand is guaranteed but full price. Spot instances can be reclaimed by AWS with a 2-minute warning. You handle this by designing stateless/restartable jobs, saving progress often, and using Spot Fleets or ASGs that mix Spot with On-Demand as a fallback.
 
-**3. Instance store vs EBS — what happens on stop/terminate?**
+## 3. Instance store vs EBS — what happens on stop/terminate?
 Instance store is temporary disk space physically attached to the server — data is lost if you stop or terminate the instance. EBS is a separate network drive that stays even if you stop the instance (only lost on terminate, unless you set "delete on termination" to false).
 
-**4. EBS volume types — gp3, gp2, io1/io2, st1, sc1?**
+## 4. EBS volume types — gp3, gp2, io1/io2, st1, sc1?
 - gp3/gp2: general-purpose SSD, good for most workloads (boot volumes, small-medium databases).
 - io1/io2: high-performance SSD for heavy databases needing very fast, consistent speed.
 - st1: cheap spinning disk for big sequential data like logs.
 - sc1: cheapest, slowest, for rarely-accessed data (cold storage).
 
-**5. AMI vs Snapshot?**
+## 5. AMI vs Snapshot?
 A Snapshot is a backup of a single EBS volume (just the disk). An AMI (Amazon Machine Image) is a full template to launch a new EC2 instance — it includes the OS, settings, and often references a snapshot.
 
-**6. User data vs Instance metadata?**
+## 6. User data vs Instance metadata?
 User data is a script you give an instance to run once when it first boots (e.g., install software). Instance metadata is information the instance can look up about itself while running (like its IP, instance ID, IAM role) by calling a special internal address.
 
-**7. IMDSv1 vs IMDSv2?**
+## 7. IMDSv1 vs IMDSv2?
 IMDSv1 lets anything on the instance simply ask for metadata with a GET request — risky if there's a web app bug that lets attackers make requests on your behalf (SSRF attack), because they could steal IAM credentials. IMDSv2 requires you to first get a secret session token before you can read metadata, closing that hole. Always prefer IMDSv2.
 
-**8. Troubleshooting a failed status check?**
+## 8. Troubleshooting a failed status check?
 EC2 has two status checks: "system status" (AWS's hardware/network problem — usually fixed by stopping/starting the instance to move it to new hardware) and "instance status" (something wrong inside your instance, like OS/kernel/config issues — checked via console logs or by attaching the volume to another instance to inspect it).
 
-**9. Security Groups vs NACLs?**
+## 9. Security Groups vs NACLs?
 Security Groups work at the instance level and are stateful — if you allow traffic in, the reply is automatically allowed out. NACLs work at the subnet level and are stateless — you must explicitly allow both inbound and outbound traffic.
 
-**10. Connecting to a private EC2 without exposing SSH?**
+## 10. Connecting to a private EC2 without exposing SSH?
 Use a Bastion Host (a small public "jump" server you SSH into first) or, better, AWS Systems Manager Session Manager, which lets you get a shell on the instance through the AWS Console/CLI with no open SSH port and no need for a public IP at all.
 
-**11. Automating patching across a fleet?**
+## 11. Automating patching across a fleet?
 Use AWS Systems Manager Patch Manager — it scans instances, applies OS patches on a schedule, and reports compliance, without you logging into each machine.
 
-**12. Placement groups?**
+## 12. Placement groups?
 - Cluster: packs instances physically close together for the fastest network speed (good for HPC).
 - Spread: keeps instances on separate hardware to reduce the chance they fail together.
 - Partition: groups instances into partitions on different hardware, used for big distributed systems like Kafka/Hadoop.
@@ -57,99 +57,99 @@ Use AWS Systems Manager Patch Manager — it scans instances, applies OS patches
 
 ## IAM (Identity and Access Management)
 
-**What is IAM?**
+## What is IAM?
 IAM controls who (or what) can do what inside your AWS account. It's how you manage logins and permissions.
 
-**1. User vs Group vs Role vs Policy?**
+## 1. User vs Group vs Role vs Policy?
 - User: an identity for a real person or app, with permanent credentials.
 - Group: a collection of users who share the same permissions.
 - Role: a set of temporary permissions that anything (a user, an AWS service, or an external identity) can "put on" temporarily — no long-term password/keys.
 - Policy: a JSON document that actually lists what's allowed or denied — attached to users, groups, or roles.
 
-**2. Identity-based vs Resource-based policy?**
+## 2. Identity-based vs Resource-based policy?
 An identity-based policy is attached to a user/group/role and says "this identity can do X." A resource-based policy is attached directly to a resource (like an S3 bucket) and says "these identities can do X to me." S3 bucket policies are a common example of resource-based.
 
-**3. Policy evaluation — how does Deny beat Allow?**
+## 3. Policy evaluation — how does Deny beat Allow?
 AWS checks all applicable policies. If even one policy says explicit Deny, that wins no matter how many Allows exist elsewhere. If there's no explicit Deny and at least one Allow, the action is allowed. By default, everything is denied unless something explicitly allows it.
 
-**4. Principle of least privilege?**
+## 4. Principle of least privilege?
 Only give people/services the exact permissions they need to do their job — nothing extra "just in case." In practice: start with a very narrow policy, look at what actions actually get used (via CloudTrail/Access Analyzer), and expand only when needed.
 
-**5. How do EC2/ECS/Lambda actually get IAM permissions?**
+## 5. How do EC2/ECS/Lambda actually get IAM permissions?
 The service internally calls AWS's Security Token Service (STS) to "assume" the role you attached (via an instance profile for EC2, a task role for ECS, an execution role for Lambda), which hands it short-lived, auto-rotating temporary credentials — you never store real keys on the machine.
 
-**6. Permissions boundary vs SCP?**
+## 6. Permissions boundary vs SCP?
 A permissions boundary limits the maximum permissions one specific IAM user/role can ever have, set by an account admin, even if their attached policy tries to grant more. An SCP (Service Control Policy) does something similar but at the AWS Organizations level, applying a ceiling across whole accounts or OUs (organizational units).
 
-**7. Cross-account access setup?**
+## 7. Cross-account access setup?
 In Account A, create a role that trusts Account B (a trust policy naming Account B's ID). Give that role the permissions needed. Then users/roles in Account B can call `AssumeRole` to get temporary credentials into Account A — no need to create duplicate users.
 
-**8. IAM Identity Center vs managing users per account?**
+## 8. IAM Identity Center vs managing users per account?
 IAM Identity Center (formerly AWS SSO) is a central place to manage user logins once and give them access across many AWS accounts, instead of creating separate IAM users in every single account — much easier at scale.
 
-**9. Rotating access keys / why avoid long-lived keys?**
+## 9. Rotating access keys / why avoid long-lived keys?
 Long-lived keys can leak (in code, logs, GitHub) and stay valid forever if not caught. Best practice: avoid access keys altogether by using IAM roles wherever possible; if keys must exist, rotate them regularly and use tools like AWS Secrets Manager or short-lived STS tokens instead.
 
-**10. Debugging "Access Denied"?**
+## 10. Debugging "Access Denied"?
 Use the IAM Policy Simulator to test what a policy allows before running it for real, and check CloudTrail logs to see exactly which action was denied and which policy caused it.
 
-**11. Trust policy vs permissions policy?**
+## 11. Trust policy vs permissions policy?
 The trust policy on a role defines *who is allowed to assume* the role (e.g., "EC2 service" or "Account B"). The permissions policy defines *what that role can do* once assumed. They answer two different questions: "who can wear this hat" vs "what can you do while wearing it."
 
 ---
 
 ## VPC (Virtual Private Cloud)
 
-**What is a VPC?**
+## What is a VPC?
 A VPC is your own private, isolated network inside AWS — like your own mini data center — where you control IP ranges, subnets, and routing.
 
-**1. VPC components — subnets, route tables, IGW, NAT, ENIs?**
+## 1. VPC components — subnets, route tables, IGW, NAT, ENIs?
 - Subnet: a smaller slice of the VPC's IP range, tied to one Availability Zone.
 - Route table: rules that decide where network traffic is sent.
 - Internet Gateway (IGW): lets resources in the VPC reach the public internet.
 - NAT Gateway: lets private resources reach the internet (for updates etc.) without being reachable *from* the internet.
 - ENI (Elastic Network Interface): a virtual network card attached to an instance.
 
-**2. Public subnet vs private subnet?**
+## 2. Public subnet vs private subnet?
 A subnet is "public" simply because its route table sends internet-bound traffic (0.0.0.0/0) to an Internet Gateway. A private subnet has no such route — it can't be reached directly from, or reach out directly to, the internet.
 
-**3. NAT Gateway vs NAT Instance?**
+## 3. NAT Gateway vs NAT Instance?
 NAT Gateway is a fully managed AWS service — no maintenance, scales automatically, more expensive. NAT Instance is just a regular EC2 instance configured to do NAT — cheaper but you must manage, patch, and scale it yourself.
 
-**4. Designing a multi-AZ, multi-tier VPC?**
+## 4. Designing a multi-AZ, multi-tier VPC?
 Split resources into tiers: public subnets for load balancers, private subnets for app servers, and separate private subnets for databases — each tier duplicated across at least 2 Availability Zones for high availability, with route tables and security groups controlling traffic between tiers.
 
-**5. VPC Peering and its limits?**
+## 5. VPC Peering and its limits?
 VPC Peering directly connects two VPCs so they can talk using private IPs, like a cable between them. Limitation: it's not transitive — if A is peered with B, and B is peered with C, A cannot automatically talk to C. Overlapping IP ranges between the two VPCs also break peering.
 
-**6. VPC Peering vs Transit Gateway?**
+## 6. VPC Peering vs Transit Gateway?
 Peering works fine for a few VPCs but gets messy at scale (you'd need a peering connection between every pair). Transit Gateway acts like a central hub/router that all VPCs connect to once, making it much easier to manage many VPCs (and even on-prem networks) together.
 
-**7. Security Groups vs NACLs (recap)?**
+## 7. Security Groups vs NACLs (recap)?
 Security Groups: instance-level, stateful (return traffic auto-allowed). NACLs: subnet-level, stateless (must allow both directions explicitly), and they're evaluated in rule-number order.
 
-**8. VPC Endpoints (Gateway vs Interface)?**
+## 8. VPC Endpoints (Gateway vs Interface)?
 A VPC Endpoint lets resources inside your VPC talk privately to AWS services (like S3) without going over the public internet or through a NAT Gateway.
 - Gateway endpoint: used for S3 and DynamoDB only, added as a route table entry, free.
 - Interface endpoint: used for most other AWS services, creates a private IP (ENI) inside your subnet, small hourly cost.
 
-**9. DNS resolution inside a VPC?**
+## 9. DNS resolution inside a VPC?
 AWS provides a built-in DNS resolver inside every VPC. `enableDnsSupport` turns this resolver on, and `enableDnsHostnames` lets instances get automatic public/private DNS names. Route 53 Resolver extends this to also handle hybrid DNS between your VPC and on-prem networks.
 
-**10. Troubleshooting connectivity between two instances?**
+## 10. Troubleshooting connectivity between two instances?
 Check, in order: are they in the same/peered VPC and can routes reach each other; does the route table have a path; does the Security Group allow the traffic; does the NACL allow it both ways; and finally check VPC Flow Logs to see if traffic is actually being dropped and where.
 
-**11. CIDR planning?**
+## 11. CIDR planning?
 This means carefully choosing non-overlapping IP address ranges for every VPC/subnet in advance, especially before you have multiple accounts, so you can later peer/connect them or use Transit Gateway without IP conflicts, and so you don't run out of IPs as you grow.
 
-**12. VPC Flow Logs?**
+## 12. VPC Flow Logs?
 A Flow Log records metadata about the traffic going in and out of network interfaces (source/destination IP, port, accepted/rejected). It's the main tool to diagnose "why is my traffic being silently dropped" issues.
 
 ---
 
 ## S3 (Simple Storage Service)
 
-**What is S3?**
+## What is S3?
 S3 is object storage in the cloud — a place to store files (objects) like images, backups, and logs, organized into "buckets," accessible over the internet or privately.
 
 **1. Storage classes and lifecycle policies?**
