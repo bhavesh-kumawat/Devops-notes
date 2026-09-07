@@ -1,6 +1,4 @@
-# AWS DevOps Interview Questions & Answers (Easy Language)
-
-Simple, plain-English answers you can actually say out loud in an interview. Each answer starts with a one-line definition, then a bit more detail.
+# AWS DevOps Interview Questions & Answers
 
 ---
 
