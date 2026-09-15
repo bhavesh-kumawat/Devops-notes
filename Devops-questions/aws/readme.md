@@ -132,7 +132,17 @@ A VPC Endpoint lets resources inside your VPC talk privately to AWS services (li
 - Interface endpoint: used for most other AWS services, creates a private IP (ENI) inside your subnet, small hourly cost.
 
 ## 9. DNS resolution inside a VPC?
-AWS provides a built-in DNS resolver inside every VPC. `enableDnsSupport` turns this resolver on, and `enableDnsHostnames` lets instances get automatic public/private DNS names. Route 53 Resolver extends this to also handle hybrid DNS between your VPC and on-prem networks.
+AWS provides a built-in DNS resolver inside every VPC. so that instances can resolve domain names — both public (internet) domains and internal/private AWS resource names — without you needing to run your own DNS server (though you can, if needed).
+
+- Every VPC has two DNS-related attributes:
+
+- enableDnsSupport (DNS Resolution)
+  Determines whether the VPC uses the Amazon-provided DNS server for resolving domain names.
+  Default: true
+- enableDnsHostnames (DNS Hostnames)
+  Determines whether instances launched in the VPC get public/private DNS hostnames assigned.
+  Default: false for custom VPCs, true for the default VPC.
+  Must be enabled if you want instances to have DNS names like ip-10-0-1-25.ec2.internal.
 
 ## 10. Troubleshooting connectivity between two instances?
 Check, in order: are they in the same/peered VPC and can routes reach each other; does the route table have a path; does the Security Group allow the traffic; does the NACL allow it both ways; and finally check VPC Flow Logs to see if traffic is actually being dropped and where.
