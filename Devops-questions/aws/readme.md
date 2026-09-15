@@ -115,7 +115,7 @@ A subnet is "public" simply because its route table sends internet-bound traffic
 NAT Gateway is a fully managed AWS service — no maintenance, scales automatically, more expensive. NAT Instance is just a regular EC2 instance configured to do NAT — cheaper but you must manage, patch, and scale it yourself.
 
 ## 4. Designing a multi-AZ, multi-tier VPC?
-Split resources into tiers: public subnets for load balancers, private subnets for app servers, and separate private subnets for databases — each tier duplicated across at least 2 Availability Zones for high availability, with route tables and security groups controlling traffic between tiers.
+A multi-tier, multi-AZ VPC means separating your architecture into logical layers (tiers) — like Web, Application, and Database — and spreading each layer across multiple Availability Zones for high availability and fault tolerance.
 
 ## 5. VPC Peering and its limits?
 VPC Peering directly connects two VPCs so they can talk using private IPs, like a cable between them. Limitation: it's not transitive — if A is peered with B, and B is peered with C, A cannot automatically talk to C. Overlapping IP ranges between the two VPCs also break peering.
